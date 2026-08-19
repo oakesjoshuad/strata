@@ -75,6 +75,9 @@ mod tests {
             )
             .expect("create target");
         store
+            .set_status(&target.id, Status::Proposed)
+            .expect("propose target");
+        store
             .set_status(&target.id, Status::Accepted)
             .expect("accept target");
         let source = store

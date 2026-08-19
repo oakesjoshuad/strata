@@ -111,14 +111,17 @@ pub fn validate_transition(
         ),
         RecordKind::Adr => matches!(
             (from, to),
-            (Status::Proposed, Status::Accepted)
+            (Status::Draft, Status::Proposed)
+                | (Status::Proposed, Status::Accepted)
                 | (Status::Accepted, Status::Deprecated)
                 | (Status::Accepted, Status::Superseded)
                 | (Status::Deprecated, Status::Superseded)
         ),
         RecordKind::Edr => matches!(
             (from, to),
-            (Status::Proposed, Status::Accepted) | (Status::Accepted, Status::Superseded)
+            (Status::Draft, Status::Proposed)
+                | (Status::Proposed, Status::Accepted)
+                | (Status::Accepted, Status::Superseded)
         ),
     };
     if valid {
@@ -190,6 +193,15 @@ mod tests {
         let document = RecordKind::Adr.default_document("title");
 
         assert!(validate_document(RecordKind::Adr, &document).is_ok());
+    }
+
+    #[test]
+    fn adr_and_edr_draft_transitions_require_proposed_first() {
+        for kind in [RecordKind::Adr, RecordKind::Edr] {
+            assert!(validate_transition(kind, Status::Draft, Status::Proposed).is_ok());
+            assert!(validate_transition(kind, Status::Proposed, Status::Accepted).is_ok());
+            assert!(validate_transition(kind, Status::Draft, Status::Accepted).is_err());
+        }
     }
 
     #[test]

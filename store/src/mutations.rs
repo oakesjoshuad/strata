@@ -136,7 +136,7 @@ mod tests {
             .create(RecordKind::Adr, "x", RecordKind::Adr.default_document("x"))
             .expect("create");
         assert!(s.set_status(&r.id, Status::Superseded).is_err());
-        assert_eq!(s.get(&r.id).expect("get").status, Status::Proposed);
+        assert_eq!(s.get(&r.id).expect("get").status, Status::Draft);
     }
 
     #[test]

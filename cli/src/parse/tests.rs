@@ -56,7 +56,7 @@ fn missing_section_is_explicit_and_non_mutating() {
 
 #[test]
 fn malformed_frontmatter_is_explicit_and_non_mutating() {
-    let input = valid_markdown().replace("status: proposed", "status: [broken");
+    let input = valid_markdown().replace("status: draft", "status: [broken");
     rejected_input(input, "frontmatter is malformed");
 }
 

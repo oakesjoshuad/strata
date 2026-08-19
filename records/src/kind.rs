@@ -55,7 +55,7 @@ impl RecordKind {
     pub fn initial_status(self) -> Status {
         match self {
             Self::Rfc | Self::Pdr => Status::Draft,
-            Self::Adr | Self::Edr => Status::Proposed,
+            Self::Adr | Self::Edr => Status::Draft,
         }
     }
 
@@ -75,12 +75,18 @@ impl RecordKind {
                 Status::Superseded,
             ],
             Self::Adr => &[
+                Status::Draft,
                 Status::Proposed,
                 Status::Accepted,
                 Status::Deprecated,
                 Status::Superseded,
             ],
-            Self::Edr => &[Status::Proposed, Status::Accepted, Status::Superseded],
+            Self::Edr => &[
+                Status::Draft,
+                Status::Proposed,
+                Status::Accepted,
+                Status::Superseded,
+            ],
         }
     }
 
