@@ -64,6 +64,12 @@ pub(crate) enum Command {
         #[arg(long)]
         json: bool,
     },
+    Retitle {
+        id: String,
+        title: String,
+        #[arg(long)]
+        json: bool,
+    },
     Revise {
         id: String,
         #[arg(long)]

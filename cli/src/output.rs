@@ -47,7 +47,7 @@ pub(crate) fn output_schema(kind: RecordKind, json_flag: bool) -> Result<(), Cli
 }
 
 pub(crate) fn output_capabilities(json_flag: bool) -> Result<(), CliError> {
-    let value = json!({"version": build_version(), "kinds": RecordKind::ALL, "commands": ["init", "new", "show", "search", "graph", "render", "export", "history", "link", "status", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "status", "revise", "validate", "schema", "capabilities", "relationships"]});
+    let value = json!({"version": build_version(), "kinds": RecordKind::ALL, "commands": ["init", "new", "show", "search", "graph", "render", "export", "template", "history", "link", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"]});
     emit_json(value, json_flag)
 }
 

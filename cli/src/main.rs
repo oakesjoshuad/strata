@@ -153,6 +153,13 @@ fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
             let status = Status::from_str(&new_status).map_err(CliError::Message)?;
             print_value(store.set_status(&parse_id(&id)?, status)?, json_flag)?;
         }
+        Command::Retitle {
+            id,
+            title,
+            json: json_flag,
+        } => {
+            print_value(store.retitle(&parse_id(&id)?, &title)?, json_flag)?;
+        }
         Command::Revise {
             id,
             document,

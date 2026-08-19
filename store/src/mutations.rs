@@ -65,6 +65,30 @@ impl Store {
         self.get(id)
     }
 
+    pub fn retitle(&mut self, id: &RecordId, title: &str) -> Result<Record, StoreError> {
+        if title.trim().is_empty() {
+            return Err(ValidationError::EmptyTitle.into());
+        }
+        let current = self.get(id)?;
+        let tx = self.conn.transaction()?;
+        let revision = current.revision + 1;
+        let now = timestamp();
+        tx.execute(
+            "UPDATE engineering_record SET title = :title, revision = :revision, updated_at = :updated_at WHERE id = :id",
+            rusqlite::named_params! {
+                ":title": title,
+                ":revision": revision,
+                ":updated_at": &now,
+                ":id": id,
+            },
+        )?;
+        let summary = format!("title changed to '{title}'");
+        insert_revision(&tx, id, revision, &current.document, &summary)?;
+        index_record(&tx, id, title, &current.document)?;
+        tx.commit()?;
+        self.get(id)
+    }
+
     pub fn link(
         &mut self,
         source: &RecordId,
@@ -113,5 +137,57 @@ mod tests {
             .expect("create");
         assert!(s.set_status(&r.id, Status::Superseded).is_err());
         assert_eq!(s.get(&r.id).expect("get").status, Status::Proposed);
+    }
+
+    #[test]
+    fn retitle_preserves_document_history_and_reindexes_title() {
+        let mut store = Store::open_memory().expect("store");
+        let document = RecordKind::Adr.default_document("document content");
+        let record = store
+            .create(RecordKind::Adr, "Old unique title", document.clone())
+            .expect("create");
+
+        let updated = store
+            .retitle(&record.id, "Renamed unique title")
+            .expect("retitle");
+
+        assert_eq!(updated.title, "Renamed unique title");
+        assert_eq!(updated.revision, 2);
+        assert_eq!(updated.document, document);
+        let history = store.history(&record.id).expect("history");
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0].document, history[1].document);
+        assert_eq!(
+            history[1].change_summary.as_deref(),
+            Some("title changed to 'Renamed unique title'")
+        );
+        assert_eq!(
+            store
+                .search("Renamed", 10, 0)
+                .expect("new title search")
+                .len(),
+            1
+        );
+        assert!(store
+            .search("Old", 10, 0)
+            .expect("old title search")
+            .is_empty());
+    }
+
+    #[test]
+    fn retitle_rejects_empty_title() {
+        let mut store = Store::open_memory().expect("store");
+        let record = store
+            .create(
+                RecordKind::Adr,
+                "Original title",
+                RecordKind::Adr.default_document("Original title"),
+            )
+            .expect("create");
+
+        assert!(matches!(
+            store.retitle(&record.id, "  "),
+            Err(StoreError::Validation(ValidationError::EmptyTitle))
+        ));
     }
 }
