@@ -2,8 +2,8 @@
 id: "EDR-0007"
 title: "Add a Draft status to ADR and EDR lifecycles, matching RFC and PDR"
 record-type: edr
-status: proposed
-revision: 1
+status: accepted
+revision: 2
 date: 2026-08-19
 slug: add-a-draft-status-to-adr-and-edr-lifecycles-matching-rfc-and-pd
 tags: []
