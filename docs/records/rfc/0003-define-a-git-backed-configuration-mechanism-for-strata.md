@@ -8,6 +8,8 @@ date: 2026-08-19
 slug: define-a-git-backed-configuration-mechanism-for-strata
 tags: []
 relationships:
+  produces:
+    - "ADR-0014"
   relates-to:
     - "ADR-0001"
     - "ADR-0013"
