@@ -61,15 +61,15 @@ rather than relying on a human or a separate audit to catch them afterward.
 
 ## Scope
 
-- A Rust CLI binary (`strata`) as the only interface for creating, revising, linking,
+\- A Rust CLI binary (`strata`) as the only interface for creating, revising, linking,
   and querying records.
-- SQLite as the canonical persistent store: record identity, lifecycle status,
+\- SQLite as the canonical persistent store: record identity, lifecycle status,
   structured document content (as validated JSON), revision history, and an explicit
   relationship graph between records.
-- Four record kinds at launch: RFC, PDR, ADR, EDR, matching the granularity Strata's
+\- Four record kinds at launch: RFC, PDR, ADR, EDR, matching the granularity Strata's
   own author wants (not Oxide's single flattened "RFD" kind — see Alternatives below).
-- FTS5 full-text search over record content.
-- Deterministic Markdown export, so records remain human-readable and reviewable in
+\- FTS5 full-text search over record content.
+\- Deterministic Markdown export, so records remain human-readable and reviewable in
   git without requiring the CLI to be installed to read them.
 
 ## Non-Goals
@@ -77,13 +77,13 @@ rather than relying on a human or a separate audit to catch them afterward.
 Carried from the originating specification (`docs/specification.md`, section 31) and
 still accurate at the point of writing this RFC:
 
-- No server, no SaaS component, no multi-user concurrent-write story beyond what a
+\- No server, no SaaS component, no multi-user concurrent-write story beyond what a
   single local SQLite file already provides.
-- No vector database, no embeddings, until a measured retrieval failure justifies the
+\- No vector database, no embeddings, until a measured retrieval failure justifies the
   added complexity.
-- No MCP adapter at launch (see ADR-0005).
-- No web application framework, no JavaScript runtime.
-- No automatic enforcement of *other* projects' source-code architecture rules —
+\- No MCP adapter at launch (see ADR-0005).
+\- No web application framework, no JavaScript runtime.
+\- No automatic enforcement of *other* projects' source-code architecture rules —
   Strata records engineering knowledge, it does not lint the codebases that knowledge
   is about.
 
@@ -94,13 +94,13 @@ The scope is bounded by the non-goals stated in this RFC:
 Carried from the originating specification (`docs/specification.md`, section 31) and
 still accurate at the point of writing this RFC:
 
-- No server, no SaaS component, no multi-user concurrent-write story beyond what a
+\- No server, no SaaS component, no multi-user concurrent-write story beyond what a
   single local SQLite file already provides.
-- No vector database, no embeddings, until a measured retrieval failure justifies the
+\- No vector database, no embeddings, until a measured retrieval failure justifies the
   added complexity.
-- No MCP adapter at launch (see ADR-0005).
-- No web application framework, no JavaScript runtime.
-- No automatic enforcement of *other* projects' source-code architecture rules —
+\- No MCP adapter at launch (see ADR-0005).
+\- No web application framework, no JavaScript runtime.
+\- No automatic enforcement of *other* projects' source-code architecture rules —
   Strata records engineering knowledge, it does not lint the codebases that knowledge
   is about.
 
@@ -139,12 +139,12 @@ relationship doesn't make sense if there's only one kind of record).
 
 ## Open Questions
 
-- The exact Rust crate layout (single crate vs. domain/adapter split at the crate
+\- The exact Rust crate layout (single crate vs. domain/adapter split at the crate
   boundary) is not decided. PDR-0001 sketches the shape; the actual `Cargo.toml`
   layout is deferred to implementation.
-- The exact `clippy.toml` gated-type rules Strata will hold itself to (analogous to
+\- The exact `clippy.toml` gated-type rules Strata will hold itself to (analogous to
   `substrate`'s `disallowed-types`/`disallowed-methods` pattern) are not yet written.
-- Whether Strata ever needs multi-user concurrent access (and therefore something
+\- Whether Strata ever needs multi-user concurrent access (and therefore something
   beyond a single local SQLite file) is explicitly unresolved — nothing in current use
   requires it, but it is not ruled out permanently, only deferred.
 

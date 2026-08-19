@@ -20,6 +20,8 @@ pub(crate) enum Command {
         #[arg(long)]
         document: Option<String>,
         #[arg(long)]
+        file: Option<PathBuf>,
+        #[arg(long)]
         json: bool,
     },
     Show {
@@ -65,7 +67,9 @@ pub(crate) enum Command {
     Revise {
         id: String,
         #[arg(long)]
-        document: String,
+        document: Option<String>,
+        #[arg(long)]
+        file: Option<PathBuf>,
         #[arg(long)]
         summary: Option<String>,
         #[arg(long)]

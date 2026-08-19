@@ -50,31 +50,31 @@ directly match what Strata needs, without Strata having to build them.
 
 ## Considered Options
 
-- **Files only** (one Markdown or JSON file per record, git as the only store).
-- **Embedded key-value store** (e.g. `redb`).
-- **SQLite** (the specification's proposal).
+\- **Files only** (one Markdown or JSON file per record, git as the only store).
+\- **Embedded key-value store** (e.g. `redb`).
+\- **SQLite** (the specification's proposal).
 
 ## Consequences
 
-- Strata gets ACID transactions across the record, revision, relationship, and search
+\- Strata gets ACID transactions across the record, revision, relationship, and search
   tables for free from SQLite's transaction model, rather than having to build that
   guarantee itself (see PDR-0001's failure-mode discussion on partial mutations).
-- Strata gets referential integrity (foreign keys on `record_relation`) and full-text
+\- Strata gets referential integrity (foreign keys on `record_relation`) and full-text
   search (FTS5) as built-in engine features rather than hand-rolled application code.
-- Strata inherits SQLite's single-writer-at-a-time model. This is a good fit for a
+\- Strata inherits SQLite's single-writer-at-a-time model. This is a good fit for a
   single local user and was treated as acceptable rather than as a limitation to work
   around (see PDR-0001's "single-writer assumption" risk) — if Strata is ever used by
   multiple concurrent writers against the same file, this decision needs revisiting.
-- The database file becomes the one thing that must exist for Strata to function;
+\- The database file becomes the one thing that must exist for Strata to function;
   losing or corrupting it loses canonical state, not just a cache. Backup/export
   strategy (`eng export`, spec section 28) exists specifically to mitigate this, but
   is a separate concern from this decision.
 
 ## Evidence
 
-- `docs/specification.md`, section 8 (the originating schema proposal this decision
+\- `docs/specification.md`, section 8 (the originating schema proposal this decision
   adopts).
-- Direct prior experience: the `substrate` repository operates a `redb`-backed event
+\- Direct prior experience: the `substrate` repository operates a `redb`-backed event
   store (`store/event/`) and a separate SQLite-backed projection store
   (`store/projection/`), reconciled asynchronously across two engines. A 2026-08-17
   persistence evaluation in that repository concluded the two-engine split exists to

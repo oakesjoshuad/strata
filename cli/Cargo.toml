@@ -9,6 +9,7 @@ clap.workspace = true
 records = { path = "../records" }
 store = { path = "../store" }
 serde_json.workspace = true
+serde_yaml.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 

@@ -2,6 +2,7 @@ mod args;
 mod document;
 mod export;
 mod output;
+mod parse;
 mod render;
 
 use args::{Cli, Command};
@@ -13,6 +14,7 @@ use records::{RecordId, RecordKind, Status};
 use render::render_record;
 use serde_json::json;
 use std::fs;
+use std::io::{self, IsTerminal};
 use std::path::PathBuf;
 use std::str::FromStr;
 use store::{Store, StoreError};
@@ -74,12 +76,20 @@ fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
             kind,
             title,
             document,
+            file,
             json: json_flag,
         } => {
             let kind: RecordKind = kind.into();
-            let document = match document {
-                Some(s) => serde_json::from_str(&s)?,
-                None => kind.default_document(&title),
+            let document = match (document, file) {
+                (Some(_), Some(_)) => {
+                    return Err(CliError::Message(
+                        "new accepts only one of --document or --file".into(),
+                    ))
+                }
+                (Some(s), None) => serde_json::from_str(&s)?,
+                (None, Some(path)) => parse::read_file(&path, kind)?,
+                (None, None) if !io::stdin().is_terminal() => parse::read_stdin(kind)?,
+                (None, None) => kind.default_document(&title),
             };
             print_value(store.create(kind, &title, document)?, json_flag)?;
         }
@@ -145,15 +155,29 @@ fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
         Command::Revise {
             id,
             document,
+            file,
             summary,
             json: json_flag,
         } => {
+            if document.is_some() && file.is_some() {
+                return Err(CliError::Message(
+                    "revise accepts only one of --document or --file".into(),
+                ));
+            }
+            let record_id = parse_id(&id)?;
+            let document = match (document, file) {
+                (Some(document), None) => serde_json::from_str(&document)?,
+                (None, Some(path)) => parse::read_file_for_id(&path, &record_id)?,
+                (None, None) if !io::stdin().is_terminal() => parse::read_stdin_for_id(&record_id)?,
+                (None, None) => {
+                    return Err(CliError::Message(
+                        "revise requires --document, --file, or Markdown on stdin".into(),
+                    ))
+                }
+                (Some(_), Some(_)) => unreachable!(),
+            };
             print_value(
-                store.revise(
-                    &parse_id(&id)?,
-                    serde_json::from_str(&document)?,
-                    summary.as_deref(),
-                )?,
+                store.revise(&record_id, document, summary.as_deref())?,
                 json_flag,
             )?;
         }

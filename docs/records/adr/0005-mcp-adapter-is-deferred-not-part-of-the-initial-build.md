@@ -39,25 +39,25 @@ independently-validated second write path.
 
 ## Considered Options
 
-- **Build an MCP adapter alongside the CLI from the start.**
-- **Defer the MCP adapter until the CLI and application core are proven under real
+\- **Build an MCP adapter alongside the CLI from the start.**
+\- **Defer the MCP adapter until the CLI and application core are proven under real
   use, and a concrete integration need justifies it.**
 
 ## Consequences
 
-- LLM agents (including the ones used to build Strata itself) interact with Strata
+\- LLM agents (including the ones used to build Strata itself) interact with Strata
   through the CLI, the same as a human would, for the foreseeable future. This is
   consistent with ADR-0002 and does not need a second decision to justify it.
-- If and when an MCP adapter is built, ADR-0002's constraint applies to it directly:
+\- If and when an MCP adapter is built, ADR-0002's constraint applies to it directly:
   it must not gain any write capability the CLI's application core doesn't already
   validate. That constraint doesn't need to be re-decided at that point — it already
   follows from this record and ADR-0002 together.
-- This decision can be revisited without conflict once there's a concrete reason to
+\- This decision can be revisited without conflict once there's a concrete reason to
   (e.g. an MCP-capable host Strata's author actually wants to use it from). It is a
   deferral, not a rejection.
 
 ## Evidence
 
-- `docs/specification.md`, section 17 (the originating "MCP is explicitly optional"
+\- `docs/specification.md`, section 17 (the originating "MCP is explicitly optional"
   principle and the list of what MCP must not duplicate — the direct basis for this
   decision's consequences).

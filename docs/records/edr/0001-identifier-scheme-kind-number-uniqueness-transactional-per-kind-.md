@@ -40,29 +40,29 @@ a duplicate.
 
 ## Considered Options
 
-- **Numbers picked by the caller** (a human or agent specifies `RFC-0007` explicitly
+\- **Numbers picked by the caller** (a human or agent specifies `RFC-0007` explicitly
   when creating a record).
-- **Numbers allocated by the application core**, transactionally, as `MAX(number) + 1`
+\- **Numbers allocated by the application core**, transactionally, as `MAX(number) + 1`
   within the target kind, inside the same transaction that inserts the new record.
 
 ## Consequences
 
-- Callers never choose or guess an identifier; `strata new` always returns the
+\- Callers never choose or guess an identifier; `strata new` always returns the
   identifier it assigned. This removes an entire class of possible mistake (two
   different records both claiming `ADR-0029`) at the cost of callers not being able to
   pre-reserve a specific number for a record they haven't created yet.
-- Numbering is per-kind, not global — `RFC-0001` and `ADR-0001` can coexist; there is
+\- Numbering is per-kind, not global — `RFC-0001` and `ADR-0001` can coexist; there is
   no shared counter across kinds. This matches the specification's stated identifier
   model directly (section 6) and means renumbering one kind never affects another.
-- Deleting a record (if ever supported — not currently planned) would leave a gap in
+\- Deleting a record (if ever supported — not currently planned) would leave a gap in
   that kind's numbering rather than being reused, the same way most such schemes work;
   this EDR does not need to decide record deletion policy to hold, since no deletion
   path exists yet.
 
 ## Evidence
 
-- `docs/specification.md`, section 6 (the originating identifier scheme this decision
+\- `docs/specification.md`, section 6 (the originating identifier scheme this decision
   adopts).
-- ADR-0001 (SQLite as canonical store): this decision's transactional-safety guarantee
+\- ADR-0001 (SQLite as canonical store): this decision's transactional-safety guarantee
   depends directly on SQLite's single-writer, transactional model — it would need
   reconsideration under any storage engine without that property.

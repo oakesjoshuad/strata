@@ -47,26 +47,26 @@ partial input."
 ## Considered Options
 
 **Tokenizer:**
-- `unicode61` alone — Unicode-aware tokenization, no stemming (a search for "decide"
+\- `unicode61` alone — Unicode-aware tokenization, no stemming (a search for "decide"
   would not match a document containing "deciding").
-- `porter unicode61` — Unicode-aware tokenization plus Porter stemming, so related word
+\- `porter unicode61` — Unicode-aware tokenization plus Porter stemming, so related word
   forms match each other.
-- `trigram` — substring/character-trigram matching, better for partial-word or
+\- `trigram` — substring/character-trigram matching, better for partial-word or
   fuzzy matching, weaker for whole-word relevance ranking.
 
 **Semantic retrieval:**
-- FTS5 alone for the initial version.
-- FTS5 plus vector embeddings from the start.
+\- FTS5 alone for the initial version.
+\- FTS5 plus vector embeddings from the start.
 
 ## Consequences
 
-- Searches for one word form of a term will surface documents using a related form of
+\- Searches for one word form of a term will surface documents using a related form of
   the same term, without the caller needing to guess every variant.
-- No embeddings means no embedding model dependency, no vector index to keep in sync
+\- No embeddings means no embedding model dependency, no vector index to keep in sync
   with canonical state, and no additional non-determinism in search results — directly
   in line with the specification's stated bar (section 9) that embeddings need a
   measured failure to justify their complexity, not a hypothetical one.
-- If real use later shows FTS5 misses queries a human would expect to match (synonyms
+\- If real use later shows FTS5 misses queries a human would expect to match (synonyms
   it doesn't stem, conceptual matches with no shared vocabulary at all), that is the
   trigger to revisit this decision — not a general sense that embeddings would be
   nice to have. This EDR should be superseded, not silently worked around, if that
@@ -74,5 +74,5 @@ partial input."
 
 ## Evidence
 
-- `docs/specification.md`, section 9 (the originating FTS5 schema and the explicit
+\- `docs/specification.md`, section 9 (the originating FTS5 schema and the explicit
   embeddings non-goal this decision adopts).

@@ -39,31 +39,31 @@ there is only one.
 
 ## Considered Options
 
-- **Repository port trait** — a `RecordRepository` trait implemented once by the
+\- **Repository port trait** — a `RecordRepository` trait implemented once by the
   store crate, called through `&dyn RecordRepository` or a generic type parameter
   from the CLI.
-- **Concrete functions** — a plain `Store` type owned by the store crate, with
+\- **Concrete functions** — a plain `Store` type owned by the store crate, with
   inherent methods called directly.
 
 ## Consequences
 
-- Every call site is concrete and monomorphic; there is no vtable indirection
+\- Every call site is concrete and monomorphic; there is no vtable indirection
   anywhere in the read or write path.
-- If a second storage engine or a second real consumer of the store crate (e.g. the
+\- If a second storage engine or a second real consumer of the store crate (e.g. the
   deferred MCP adapter, ADR-0005) is ever built, this decision needs revisiting —
   the trait should be introduced once there are two real implementations to shape
   it against, not speculatively now. This follows the same rule-of-three reasoning
   applied elsewhere in this project's design work.
-- Testing the store crate uses a real SQLite `:memory:` connection, not a mock or a
+\- Testing the store crate uses a real SQLite `:memory:` connection, not a mock or a
   fake trait implementation — there is no trait to fake, and the real engine is
   cheap enough locally that mocking it would trade correctness for no real benefit.
-- The records crate stays fully decoupled from the store crate's existence; the
+\- The records crate stays fully decoupled from the store crate's existence; the
   store crate is the only place that knows a `Store` exists.
 
 ## Evidence
 
-- `store/src/lib.rs`: `Store` is a concrete struct with inherent methods; `Store::open`
+\- `store/src/lib.rs`: `Store` is a concrete struct with inherent methods; `Store::open`
   and `Store::open_memory` are its only construction sites.
-- ADR-0002 (CLI-only mutation boundary): already establishes that the CLI is the
+\- ADR-0002 (CLI-only mutation boundary): already establishes that the CLI is the
   sole caller of these methods, which is what makes a substitutable-implementation
   abstraction unnecessary in the first place.

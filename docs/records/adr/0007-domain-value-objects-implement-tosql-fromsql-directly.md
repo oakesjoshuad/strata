@@ -47,34 +47,34 @@ from these value-level conversions.
 
 ## Considered Options
 
-- **Bridge wrapper** — define a local wrapper type in the store crate, mirroring
+\- **Bridge wrapper** — define a local wrapper type in the store crate, mirroring
   substrate's `SqlCode<T>`, and convert each domain value through it at the storage
   boundary.
-- **Direct impl** — implement `rusqlite::types::ToSql` and `FromSql` directly on
+\- **Direct impl** — implement `rusqlite::types::ToSql` and `FromSql` directly on
   `RecordKind`, `Status`, and `RecordId` in the records crate.
 
 ## Consequences
 
-- No bridge or wrapper type exists anywhere in the codebase for `RecordKind`,
+\- No bridge or wrapper type exists anywhere in the codebase for `RecordKind`,
   `Status`, or `RecordId`; the store crate binds and reads these types directly
   through rusqlite's named-parameter API.
-- The records crate is no longer "no dependencies beyond std and serde" in the
+\- The records crate is no longer "no dependencies beyond std and serde" in the
   strictest sense — it takes a real dependency on `rusqlite::types`. This is a
   deliberate, narrow exception, not a general license to add other infrastructure
   dependencies to records; anything that touches a live connection, a query, or a
   transaction still belongs in the store crate only.
-- If Strata ever needs a second storage engine (see ADR-0006's reversal condition),
+\- If Strata ever needs a second storage engine (see ADR-0006's reversal condition),
   these impls become dead weight specific to SQLite's value model and would need to
   move behind a boundary at that point — accepted now because there is no second
   engine to design for yet.
-- A future contributor reading `records/src/lib.rs` might reasonably ask why a
+\- A future contributor reading `records/src/lib.rs` might reasonably ask why a
   domain crate imports rusqlite; this ADR is the answer.
 
 ## Evidence
 
-- `records/src/lib.rs`: `impl ToSql for RecordKind`, `impl FromSql for RecordKind`,
+\- `records/src/lib.rs`: `impl ToSql for RecordKind`, `impl FromSql for RecordKind`,
   `impl ToSql for Status`, `impl FromSql for Status` — direct impls, no wrapper type
   in between.
-- `store/projection/src/sql_code.rs` (substrate repository): the `SqlCode<T>`
+\- `store/projection/src/sql_code.rs` (substrate repository): the `SqlCode<T>`
   pattern this decision deliberately avoids, and why — that crate does not own the
   types it wraps; records does.

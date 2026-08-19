@@ -174,7 +174,7 @@ fn render_document(document: &Document) -> String {
                 output.push_str(&format!("{} {}\n\n", "#".repeat(usize::from(*level)), text));
             }
             Block::Paragraph(content) => {
-                output.push_str(content.trim_end_matches('\n'));
+                output.push_str(&escape_paragraph(content.trim_end_matches('\n')));
                 output.push_str("\n\n");
             }
             Block::List(items) => {
@@ -226,6 +226,20 @@ fn render_document(document: &Document) -> String {
     }
     output.push('\n');
     output
+}
+
+fn escape_paragraph(content: &str) -> String {
+    content
+        .lines()
+        .map(|line| {
+            if line.starts_with("- ") {
+                format!("\\{line}")
+            } else {
+                line.to_owned()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn yaml_string(value: &str) -> String {

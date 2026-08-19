@@ -44,33 +44,33 @@ that door validates schema, lifecycle, and relationships before anything commits
 
 ## Considered Options
 
-- **Unrestricted access** — any caller (human, script, LLM agent) may open the SQLite
+\- **Unrestricted access** — any caller (human, script, LLM agent) may open the SQLite
   database directly and read or write it with ordinary SQL.
-- **CLI-only mutation** — all writes go through the `strata` binary's validated
+\- **CLI-only mutation** — all writes go through the `strata` binary's validated
   commands; nothing else is permitted to write to the database.
 
 ## Consequences
 
-- The specific failure mode that motivated this decision — a mutation tool with no
+\- The specific failure mode that motivated this decision — a mutation tool with no
   model of record validity silently corrupting a document — becomes structurally
   impossible for Strata's own records, because the only way to mutate a record is
   through code that has to construct and validate a full, well-formed change before it
   can commit one.
-- An MCP adapter, if one is ever built (ADR-0005), must call the same application-core
+\- An MCP adapter, if one is ever built (ADR-0005), must call the same application-core
   validation the CLI calls; it may not become a second, independently-implemented
   write path with its own (potentially divergent) notion of what a valid mutation is.
-- This puts real weight on the CLI's own commands being correct and complete — a bug
+\- This puts real weight on the CLI's own commands being correct and complete — a bug
   in a CLI command's validation logic is no longer just a bug, it is the entire trust
   boundary. This is an argument for the verification work described in PDR-0001
   (end-to-end tests of transactional consistency and forced-failure rollback), not
   just a stated intention.
-- Bulk or scripted operations (e.g. importing many records at once) must go through
+\- Bulk or scripted operations (e.g. importing many records at once) must go through
   the CLI's own batch-capable commands, not a hand-written script against the database
   file, even when that would be faster to write.
 
 ## Evidence
 
-- `feedback_adr_mcp_update_content_gotcha` (session memory, substrate repository): the
+\- `feedback_adr_mcp_update_content_gotcha` (session memory, substrate repository): the
   concrete incident this decision is a direct structural fix for.
-- `docs/specification.md`, sections 3.2, 3.3, and 30 (the originating trust-boundary
+\- `docs/specification.md`, sections 3.2, 3.3, and 30 (the originating trust-boundary
   design this decision adopts).

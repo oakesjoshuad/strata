@@ -40,56 +40,56 @@ scope for the first version, and nothing here should be read as ruling them out 
 Carried directly from `docs/specification.md` section 5 (record semantics) and section
 30 (security and trust boundary):
 
-- Each record kind (RFC, PDR, ADR, EDR) has its own required document fields and its
+\- Each record kind (RFC, PDR, ADR, EDR) has its own required document fields and its
   own lifecycle states; infrastructure (identity, storage, revisioning, search) is
   shared across kinds.
-- Identifiers are `(kind, number)` pairs, unique per kind, allocated transactionally
+\- Identifiers are `(kind, number)` pairs, unique per kind, allocated transactionally
   (EDR-0001).
-- Relationships between records are explicit graph edges, not prose conventions —
+\- Relationships between records are explicit graph edges, not prose conventions —
   `derived-from`, `produces`, `constrains`, `supersedes`, and similar (spec section 7).
-- An LLM agent interacting with Strata gets the same validated CLI surface a human
+\- An LLM agent interacting with Strata gets the same validated CLI surface a human
   gets. It is not trusted merely because it is using a documented skill (spec section
   30) — every mutation goes through the same validation regardless of caller.
 
 ## Constraints
 
 **Goals:**
-- A record can be created, revised, linked to other records, searched, and inspected
+\- A record can be created, revised, linked to other records, searched, and inspected
   entirely through the CLI, with no other write path into the database.
-- Every mutation is transactional: a record's current state, its revision history, its
+\- Every mutation is transactional: a record's current state, its revision history, its
   relationships, and its search index stay consistent with each other at all times —
   there is no window where one of those four is stale relative to the others.
-- A bad request (a link to a record that does not exist, a relationship kind that
+\- A bad request (a link to a record that does not exist, a relationship kind that
   is not defined, a document missing a required field) fails without partially
   mutating the database.
-- The tool is useful without Pandoc, without a static site, and without an MCP server
+\- The tool is useful without Pandoc, without a static site, and without an MCP server
   — those are additive later, not prerequisites for a working v0.1.
 
 **Non-goals** (things that could reasonably have been goals here, but are deliberately
 excluded from this document and from v0.1):
-- Rendering records to Markdown, HTML, PDF, or any other output format. Storage
+\- Rendering records to Markdown, HTML, PDF, or any other output format. Storage
   correctness and the CLI's own read commands (`show`, `search`, `--json`) are enough
   to use the tool; rendering is a separate, later concern (see "v0.1 scope cut" below).
-- Vector search or embeddings. FTS5 is the retrieval mechanism for v0.1 in full; this
+\- Vector search or embeddings. FTS5 is the retrieval mechanism for v0.1 in full; this
   is not a placeholder pending a better search backend, it is the actual plan unless a
   real retrieval failure shows FTS5 is insufficient.
-- An MCP adapter (ADR-0005).
+\- An MCP adapter (ADR-0005).
 
 ## Proposed Design
 
 **Storage.** SQLite is the canonical store (ADR-0001). The core tables, adapted from
 the specification's representative schema (section 8):
 
-- `engineering_record` — `id`, `kind`, `number`, `title`, `status`, `document` (JSON,
+\- `engineering_record` — `id`, `kind`, `number`, `title`, `status`, `document` (JSON,
   `CHECK(json_valid(document))`), `revision`, `created_at`, `updated_at`,
   `UNIQUE(kind, number)`.
-- `record_relation` — `source_id`, `relation`, `target_id`, with foreign keys into
+\- `record_relation` — `source_id`, `relation`, `target_id`, with foreign keys into
   `engineering_record` on both ends, so a relationship can never point at a record
   that does not exist.
-- `record_revision` — `record_id`, `revision`, `document`, `changed_at`,
+\- `record_revision` — `record_id`, `revision`, `document`, `changed_at`,
   `changed_by`, `change_summary`. Every meaningful mutation preserves the prior
   document state here before it is overwritten.
-- `evidence` and `code_reference` — first-class tables so a decision can cite a
+\- `evidence` and `code_reference` — first-class tables so a decision can cite a
   benchmark, an experiment, an issue, or a specific file/line range, rather than
   referencing them only in prose.
 
@@ -121,16 +121,16 @@ current structured document — search results reflect the same state `show` and
 **Storage.** SQLite is the canonical store (ADR-0001). The core tables, adapted from
 the specification's representative schema (section 8):
 
-- `engineering_record` — `id`, `kind`, `number`, `title`, `status`, `document` (JSON,
+\- `engineering_record` — `id`, `kind`, `number`, `title`, `status`, `document` (JSON,
   `CHECK(json_valid(document))`), `revision`, `created_at`, `updated_at`,
   `UNIQUE(kind, number)`.
-- `record_relation` — `source_id`, `relation`, `target_id`, with foreign keys into
+\- `record_relation` — `source_id`, `relation`, `target_id`, with foreign keys into
   `engineering_record` on both ends, so a relationship can never point at a record
   that does not exist.
-- `record_revision` — `record_id`, `revision`, `document`, `changed_at`,
+\- `record_revision` — `record_id`, `revision`, `document`, `changed_at`,
   `changed_by`, `change_summary`. Every meaningful mutation preserves the prior
   document state here before it is overwritten.
-- `evidence` and `code_reference` — first-class tables so a decision can cite a
+\- `evidence` and `code_reference` — first-class tables so a decision can cite a
   benchmark, an experiment, an issue, or a specific file/line range, rather than
   referencing them only in prose.
 
@@ -182,16 +182,16 @@ migration every time an RFC template gains a field.
 
 ## Failure Modes
 
-- **A mutation partially applies.** Prevented by requiring `engineering_record`,
+\- **A mutation partially applies.** Prevented by requiring `engineering_record`,
   `record_revision`, `record_relation`, and the FTS index update to commit inside one
   SQLite transaction. If any step fails, the whole mutation rolls back — this is a
   requirement, not yet a verified property; it needs a test that actually forces a
   failure mid-transaction, not just an assumption that "it's one transaction" implies
   correctness.
-- **A relationship targets a record that doesn't exist, or that existed and was later
+\- **A relationship targets a record that doesn't exist, or that existed and was later
   deleted.** Prevented structurally by the foreign key constraints on
   `record_relation`, not by application-layer double-checking alone.
-- **A record's document no longer matches its kind's current schema**, because the
+\- **A record's document no longer matches its kind's current schema**, because the
   schema changed after the record was written. This is a real open question — see
   Risks below.
 
@@ -224,35 +224,35 @@ writing them is part of implementing this design, not a separate later concern.
 
 ## Risks
 
-- **Schema evolution.** Nothing in this design yet specifies what happens to an
+\- **Schema evolution.** Nothing in this design yet specifies what happens to an
   existing record's `document` JSON when its kind's schema gains or changes a
   required field. This is an open question, not a decided policy — resolving it
   (versioned document schemas inside the JSON itself, e.g. the spec's `"schema":
   "pdr/v1"` convention in section 10.1, is the leading candidate) is deferred to
   implementation and may need its own EDR once the first schema change actually
   happens.
-- **Single-writer assumption.** SQLite handles one writer at a time natively; this
+\- **Single-writer assumption.** SQLite handles one writer at a time natively; this
   design leans on that rather than building anything to fake concurrent writers. If
   Strata is ever used by more than one process against the same database file
   concurrently, this needs revisiting — it is explicitly out of scope for now (see
   Non-Goals), not solved.
-- **FTS5 relevance at scale.** Untested against real record volume. The non-goal on
+\- **FTS5 relevance at scale.** Untested against real record volume. The non-goal on
   embeddings (spec section 9) is a bet that FTS5 is good enough; that bet is unverified
   until there's enough real content to test it against.
 
 ## Open Questions
 
-- Schema evolution policy for existing records (see Risks).
-- Exact Rust crate boundaries — carried over from RFC-0001, still unresolved here.
-- Whether `record_revision.changed_by` is populated at all for a single-user local
+\- Schema evolution policy for existing records (see Risks).
+\- Exact Rust crate boundaries — carried over from RFC-0001, still unresolved here.
+\- Whether `record_revision.changed_by` is populated at all for a single-user local
   tool, or whether that column is premature until Strata has more than one author.
 
 ## Resulting Decisions
 
-- ADR-0001: SQLite as Strata's canonical persistent store.
-- ADR-0002: CLI-only mutation boundary.
-- ADR-0003: Markdown/Pandoc output is a generated projection, never canonical.
-- ADR-0004: Strata owns its own static-site information architecture.
-- ADR-0005: MCP adapter is deferred, not part of the initial build.
-- EDR-0001: Identifier scheme — `(kind, number)` uniqueness, transactional allocation.
-- EDR-0002: FTS5 configuration — `porter unicode61` tokenizer, embeddings deferred.
+\- ADR-0001: SQLite as Strata's canonical persistent store.
+\- ADR-0002: CLI-only mutation boundary.
+\- ADR-0003: Markdown/Pandoc output is a generated projection, never canonical.
+\- ADR-0004: Strata owns its own static-site information architecture.
+\- ADR-0005: MCP adapter is deferred, not part of the initial build.
+\- EDR-0001: Identifier scheme — `(kind, number)` uniqueness, transactional allocation.
+\- EDR-0002: FTS5 configuration — `porter unicode61` tokenizer, embeddings deferred.

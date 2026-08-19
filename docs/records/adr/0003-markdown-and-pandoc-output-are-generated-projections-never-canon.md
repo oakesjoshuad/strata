@@ -36,26 +36,26 @@ divergence between the file and the database as "the file wins."
 
 ## Considered Options
 
-- **Markdown is canonical**, as in conventional ADR tooling — the file on disk is the
+\- **Markdown is canonical**, as in conventional ADR tooling — the file on disk is the
   record, SQLite (if present at all) is a derived index.
-- **Markdown is a generated, read-only projection** of the SQLite record — produced by
+\- **Markdown is a generated, read-only projection** of the SQLite record — produced by
   a deterministic renderer, never hand-edited, regenerated whenever the record changes.
 
 ## Consequences
 
-- A record can never be edited by opening its Markdown file in a text editor and
+\- A record can never be edited by opening its Markdown file in a text editor and
   saving — mutation only happens through ADR-0002's CLI-only boundary, which writes to
   SQLite and then re-renders. This closes off a second, informal write path that would
   otherwise bypass ADR-0002's guarantee entirely.
-- Markdown stays useful for what it's actually good at — human review in a pull
+\- Markdown stays useful for what it's actually good at — human review in a pull
   request, `grep`-ability, working without the CLI installed — without being asked to
   also be the thing that enforces structural correctness. That job belongs to the
   Rust application core (ADR-0002), not to Markdown convention.
-- The renderer itself becomes a piece of code that has to be correct and deterministic
+\- The renderer itself becomes a piece of code that has to be correct and deterministic
   — a non-deterministic renderer (e.g. one whose output depends on field iteration
   order in a JSON map) would make `eng export --check` unreliable and defeat the point
   of this decision. This is a real implementation constraint, not just a nicety.
-- This decision is explicitly deferred in effect for v0.1 (see PDR-0001's scope cut):
+\- This decision is explicitly deferred in effect for v0.1 (see PDR-0001's scope cut):
   the deterministic renderer is not part of the first working version. The decision is
   recorded now because it shapes how the SQLite schema and document model are
   designed even before the renderer exists — document content must be structured
@@ -64,8 +64,8 @@ divergence between the file and the database as "the file wins."
 
 ## Evidence
 
-- `docs/specification.md`, sections 3.1, 18, and 19 (the originating "canonical
+\- `docs/specification.md`, sections 3.1, 18, and 19 (the originating "canonical
   knowledge, projected documents" principle this decision adopts).
-- `feedback_adr_mcp_update_content_gotcha` (session memory, substrate repository): the
+\- `feedback_adr_mcp_update_content_gotcha` (session memory, substrate repository): the
   incident that showed what happens when a document can be edited directly with no
   canonical source to fall back to or diff against.
