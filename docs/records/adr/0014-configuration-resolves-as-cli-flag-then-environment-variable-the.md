@@ -2,8 +2,8 @@
 id: "ADR-0014"
 title: "Configuration resolves as CLI flag, then environment variable, then config file, then default"
 record-type: adr
-status: proposed
-revision: 1
+status: accepted
+revision: 2
 date: 2026-08-19
 slug: configuration-resolves-as-cli-flag-then-environment-variable-the
 tags: []
