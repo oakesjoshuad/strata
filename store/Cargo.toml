@@ -1,5 +1,5 @@
 [package]
-name = "strata-store"
+name = "store"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,6 +9,6 @@ refinery.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-strata-records = { path = "../records" }
+records = { path = "../records" }
+kernel = { path = "../kernel" }
 thiserror.workspace = true
-

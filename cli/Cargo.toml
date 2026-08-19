@@ -6,8 +6,11 @@ build = "build.rs"
 
 [dependencies]
 clap.workspace = true
+records = { path = "../records" }
+store = { path = "../store" }
 serde_json.workspace = true
 serde.workspace = true
-strata-records = { path = "../records" }
-strata-store = { path = "../store" }
 thiserror.workspace = true
+
+[build-dependencies]
+kernel = { path = "../kernel" }

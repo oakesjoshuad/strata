@@ -1,16 +1,50 @@
+# Workspace-level Clippy configuration.
+#
+# disallowed-types: rusqlite::Connection must not appear outside its permitted
+# naming sites. This lint is the actual enforcement mechanism, not a secondary
+# layer on top of one — records/Cargo.toml depends on the full rusqlite crate
+# (the same one store depends on), it just uses only the rusqlite::types surface
+# by convention (ADR-0007); kernel follows this same types-only rule. The Cargo dependency graph does not and cannot forbid
+# records from naming rusqlite::Connection; nothing stops that except this rule.
+# Do not assume a real graph-level boundary exists here the way it does between
+# substrate's app/* and runtime/* crates, where the dependency is genuinely absent.
+#
+# The only permitted naming sites are:
+#   - store/: the crate that owns and defines connection handling
+#     (#![allow(clippy::disallowed_types)] at the crate root in store/src/lib.rs)
+#   - cli/: the composition root (exempts itself via
+#     #![allow(clippy::disallowed_types)] at the point it opens the one connection
+#     the process uses)
+#
+# Adding a type here signals it is gated: it belongs in store/ and may only appear
+# at the composition root otherwise. Removing or bypassing an entry requires an
+# ADR (see ADR-0002, ADR-0006).
+
+# Allow unwrap/expect/panic in test code — tests should panic on failure.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+
 disallowed-types = [
-    { path = "rusqlite::Connection", reason = "Direct SQLite access is confined to store and cli's composition root. See the CLI-only-mutation-boundary and no-repository-trait decisions." },
+    { path = "rusqlite::Connection", reason = "Direct SQLite access is confined to store/ and cli/'s composition root — ADR-0002 (CLI-only mutation boundary), ADR-0006 (no repository trait, so there is no port to hide the connection behind; the crate boundary is the only boundary)." },
 ]
 
 [[disallowed-methods]]
 path = "core::result::Result::unwrap_or"
-reason = "Do not turn a validation failure into a default; return the typed error."
+reason = "Do not turn a validation or parse failure into a default; return the typed error instead."
 
 [[disallowed-methods]]
 path = "core::result::Result::unwrap_or_default"
-reason = "Do not turn a validation failure into a default; return the typed error."
+reason = "Do not turn a validation or parse failure into a default; return the typed error instead."
 
 [[disallowed-methods]]
 path = "core::result::Result::unwrap_or_else"
-reason = "Do not turn a validation failure into a default; return the typed error."
+reason = "Do not turn a validation or parse failure into a default; return the typed error instead."
 
+# Reader SQL convention: named parameters only, never positional. rusqlite::params!
+# builds positional bindings; named_params! builds named ones. Disallowing the
+# macro makes the convention mechanically checked instead of just documented —
+# see CLAUDE.md / AGENTS.md, "Reader SQL convention".
+[[disallowed-macros]]
+path = "rusqlite::params"
+reason = "Positional SQL bindings are banned — use named_params! so clause order can never silently desync from binding order."

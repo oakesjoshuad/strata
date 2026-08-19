@@ -1,5 +1,5 @@
 [workspace]
-members = ["records", "store", "cli"]
+members = ["kernel", "records", "store", "cli"]
 resolver = "2"
 
 [workspace.dependencies]
