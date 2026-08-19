@@ -1,4 +1,4 @@
-use crate::{RecordId, RecordKind, Status};
+use crate::{FieldKind, RecordId, RecordKind, Status};
 use serde_json::Value as JsonValue;
 use thiserror::Error;
 
@@ -12,6 +12,12 @@ pub enum ValidationError {
     MissingField { kind: RecordKind, field: String },
     #[error("{kind} document field '{field}' must not be empty")]
     EmptyField { kind: RecordKind, field: String },
+    #[error("{kind} document field '{field}' has wrong type; expected {expected:?}")]
+    WrongFieldType {
+        kind: RecordKind,
+        field: String,
+        expected: FieldKind,
+    },
     #[error("invalid status transition for {kind}: {from} -> {to}")]
     InvalidTransition {
         kind: RecordKind,
@@ -41,23 +47,28 @@ pub fn validate_document(kind: RecordKind, document: &JsonValue) -> Result<(), V
     let obj = document
         .as_object()
         .ok_or(ValidationError::DocumentNotObject)?;
-    for field in kind.required_fields() {
+    for (field, field_kind) in kind.required_fields() {
         let Some(v) = obj.get(*field) else {
             return Err(ValidationError::MissingField {
                 kind,
                 field: (*field).into(),
             });
         };
-        let empty = match v {
-            JsonValue::String(s) => s.trim().is_empty(),
-            JsonValue::Null => true,
-            _ => false,
-        };
-        if empty {
-            return Err(ValidationError::EmptyField {
-                kind,
-                field: (*field).into(),
-            });
+        match (field_kind, v) {
+            (FieldKind::Scalar, JsonValue::String(value)) if value.trim().is_empty() => {
+                return Err(ValidationError::EmptyField {
+                    kind,
+                    field: (*field).into(),
+                });
+            }
+            (FieldKind::Scalar, JsonValue::String(_)) | (FieldKind::List, JsonValue::Array(_)) => {}
+            (expected, _) => {
+                return Err(ValidationError::WrongFieldType {
+                    kind,
+                    field: (*field).into(),
+                    expected: *expected,
+                });
+            }
         }
     }
     Ok(())
@@ -113,4 +124,32 @@ pub fn validate_relationship(
         return Err(ValidationError::SelfRelationship);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn scalar_field_array_is_rejected_with_wrong_type() {
+        let mut document = RecordKind::Adr.default_document("title");
+        document["context"] = json!([]);
+
+        assert!(matches!(
+            validate_document(RecordKind::Adr, &document),
+            Err(ValidationError::WrongFieldType {
+                kind: RecordKind::Adr,
+                field,
+                expected: FieldKind::Scalar,
+            }) if field == "context"
+        ));
+    }
+
+    #[test]
+    fn all_scalar_default_fields_are_valid() {
+        let document = RecordKind::Adr.default_document("title");
+
+        assert!(validate_document(RecordKind::Adr, &document).is_ok());
+    }
 }

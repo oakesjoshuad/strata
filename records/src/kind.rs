@@ -3,6 +3,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value as JsonValue};
 use std::str::FromStr;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FieldKind {
+    Scalar,
+    List,
+}
+
 sql_enum! {
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
     #[serde(rename_all = "lowercase")]
@@ -68,43 +75,50 @@ impl RecordKind {
         }
     }
 
-    pub fn required_fields(self) -> &'static [&'static str] {
+    pub fn required_fields(self) -> &'static [(&'static str, FieldKind)] {
         match self {
             Self::Rfc => &[
-                "motivation",
-                "problem",
-                "scope",
-                "non_goals",
-                "constraints",
-                "proposal",
-                "alternatives",
-                "questions_for_review",
-                "outcome",
+                ("motivation", FieldKind::Scalar),
+                ("problem", FieldKind::Scalar),
+                ("scope", FieldKind::Scalar),
+                ("non_goals", FieldKind::Scalar),
+                ("constraints", FieldKind::Scalar),
+                ("proposal", FieldKind::Scalar),
+                ("alternatives", FieldKind::Scalar),
+                ("questions_for_review", FieldKind::Scalar),
+                ("outcome", FieldKind::Scalar),
             ],
             Self::Pdr => &[
-                "problem",
-                "requirements",
-                "constraints",
-                "proposed_design",
-                "components",
-                "interfaces",
-                "data_model",
-                "failure_modes",
-                "alternatives",
-                "evidence",
-                "experiments",
-                "risks",
-                "open_questions",
-                "resulting_decisions",
+                ("problem", FieldKind::Scalar),
+                ("requirements", FieldKind::Scalar),
+                ("constraints", FieldKind::Scalar),
+                ("proposed_design", FieldKind::Scalar),
+                ("components", FieldKind::Scalar),
+                ("interfaces", FieldKind::Scalar),
+                ("data_model", FieldKind::Scalar),
+                ("failure_modes", FieldKind::Scalar),
+                ("alternatives", FieldKind::Scalar),
+                ("evidence", FieldKind::Scalar),
+                ("experiments", FieldKind::Scalar),
+                ("risks", FieldKind::Scalar),
+                ("open_questions", FieldKind::Scalar),
+                ("resulting_decisions", FieldKind::Scalar),
             ],
             Self::Adr | Self::Edr => &[
-                "context",
-                "decision",
-                "alternatives",
-                "consequences",
-                "evidence",
+                ("context", FieldKind::Scalar),
+                ("decision", FieldKind::Scalar),
+                ("alternatives", FieldKind::Scalar),
+                ("consequences", FieldKind::Scalar),
+                ("evidence", FieldKind::Scalar),
             ],
         }
+    }
+
+    pub fn field_kind(self, field: &str) -> Option<FieldKind> {
+        self.required_fields()
+            .iter()
+            .find(|(name, _)| *name == field)
+            .map(|(_, kind)| *kind)
     }
 
     pub fn default_document(self, title: &str) -> JsonValue {
@@ -113,28 +127,14 @@ impl RecordKind {
             "schema".into(),
             JsonValue::String(format!("{}/v1", self.slug())),
         );
-        for field in self.required_fields() {
-            let v = if *field == "alternatives"
-                || *field == "evidence"
-                || *field == "requirements"
-                || *field == "constraints"
-                || *field == "non_goals"
-                || *field == "questions_for_review"
-                || *field == "components"
-                || *field == "interfaces"
-                || *field == "failure_modes"
-                || *field == "experiments"
-                || *field == "risks"
-                || *field == "open_questions"
-                || *field == "resulting_decisions"
-            {
-                JsonValue::Array(Vec::new())
-            } else {
-                JsonValue::String(if *field == "decision" {
+        for (field, field_kind) in self.required_fields() {
+            let v = match field_kind {
+                FieldKind::List => JsonValue::Array(Vec::new()),
+                FieldKind::Scalar => JsonValue::String(if *field == "decision" {
                     format!("We will {title}.")
                 } else {
                     title.to_string()
-                })
+                }),
             };
             m.insert((*field).into(), v);
         }

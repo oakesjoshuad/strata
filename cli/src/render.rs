@@ -18,7 +18,7 @@ pub(crate) fn render_template(kind: RecordKind) -> Result<String, CliError> {
     let id = RecordId::new(kind, 0);
     let mut document = kind.default_document("");
     if let JsonValue::Object(values) = &mut document {
-        for field in kind.required_fields() {
+        for (field, _) in kind.required_fields() {
             if matches!(values.get(*field), Some(JsonValue::String(_))) {
                 values.insert(
                     (*field).into(),

@@ -236,9 +236,7 @@ fn parse_section(
 }
 
 fn array_field(kind: RecordKind, field: &str) -> bool {
-    kind.default_document("")
-        .get(field)
-        .is_some_and(serde_json::Value::is_array)
+    kind.field_kind(field) == Some(records::FieldKind::List)
 }
 
 fn document_to_json(
