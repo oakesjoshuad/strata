@@ -11,7 +11,7 @@ use output::{
     emit_json, output_capabilities, output_relationships, output_schema, print_graph, print_value,
 };
 use records::{RecordId, RecordKind, Status};
-use render::render_record;
+use render::{render_record, render_template};
 use serde_json::json;
 use std::fs;
 use std::io::{self, IsTerminal};
@@ -60,6 +60,7 @@ fn run() -> Result<(), CliError> {
             kind,
             json: json_flag,
         } => output_schema(kind.into(), json_flag)?,
+        Command::Template { kind } => print!("{}", render_template(kind.into())?),
         Command::Capabilities { json: json_flag } => output_capabilities(json_flag)?,
         Command::Relationships { json: json_flag } => output_relationships(json_flag)?,
         command => {
@@ -196,6 +197,7 @@ fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
         }
         Command::Init
         | Command::Schema { .. }
+        | Command::Template { .. }
         | Command::Capabilities { .. }
         | Command::Relationships { .. } => unreachable!(),
     }

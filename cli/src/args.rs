@@ -84,6 +84,9 @@ pub(crate) enum Command {
         #[arg(long)]
         json: bool,
     },
+    Template {
+        kind: KindArg,
+    },
     Capabilities {
         #[arg(long)]
         json: bool,

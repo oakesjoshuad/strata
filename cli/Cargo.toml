@@ -5,6 +5,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
+chrono.workspace = true
 clap.workspace = true
 records = { path = "../records" }
 store = { path = "../store" }

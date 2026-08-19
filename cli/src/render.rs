@@ -1,6 +1,7 @@
 use crate::document::{fields, Block, Document, Frontmatter};
 use crate::CliError;
-use records::{Record, RecordId};
+use chrono::Utc;
+use records::{Record, RecordId, RecordKind};
 use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
 use store::Store;
@@ -10,6 +11,42 @@ pub(crate) fn render_record(store: &Store, id: &RecordId) -> Result<String, CliE
     let relationships = store.outgoing_relationships(id)?;
     let document = document_from_record(&record, relationships)?;
     Ok(render_document(&document))
+}
+
+pub(crate) fn render_template(kind: RecordKind) -> Result<String, CliError> {
+    let title = format!("Untitled {}", kind.code());
+    let id = RecordId::new(kind, 0);
+    let mut document = kind.default_document("");
+    if let JsonValue::Object(values) = &mut document {
+        for field in kind.required_fields() {
+            if matches!(values.get(*field), Some(JsonValue::String(_))) {
+                values.insert(
+                    (*field).into(),
+                    JsonValue::String(format!("TODO: {}", field.replace('_', " "))),
+                );
+            }
+        }
+    }
+    let mut blocks = vec![Block::Heading {
+        level: 1,
+        text: format!("{id}: {title}"),
+    }];
+    blocks.extend(document_body(kind, &document)?);
+    let frontmatter = Frontmatter {
+        id,
+        title,
+        record_type: kind.slug(),
+        status: kind.initial_status().to_string(),
+        revision: 1,
+        date: Utc::now().date_naive().to_string(),
+        slug: format!("untitled-{}", kind.slug()),
+        tags: Vec::new(),
+        relationships: BTreeMap::new(),
+    };
+    Ok(render_document(&Document {
+        frontmatter,
+        blocks,
+    }))
 }
 
 fn document_from_record(
@@ -34,21 +71,12 @@ fn document_from_record(
         Some(_) => return Err(CliError::Message("record tags must be a JSON array".into())),
         None => Vec::new(),
     };
-    let date = record.created_at.chars().take(10).collect();
     let mut blocks = vec![Block::Heading {
         level: 1,
         text: format!("{}: {}", record.id, record.title),
     }];
-    for (field, heading) in fields(record.id.kind) {
-        let value = record.document.get(*field).ok_or_else(|| {
-            CliError::Message(format!("record {} is missing field '{field}'", record.id))
-        })?;
-        blocks.push(Block::Heading {
-            level: 2,
-            text: (*heading).into(),
-        });
-        blocks.extend(section_blocks(value)?);
-    }
+    blocks.extend(document_body(record.id.kind, &record.document)?);
+    let date = record.created_at.chars().take(10).collect();
     Ok(Document {
         frontmatter: Frontmatter {
             id: record.id.clone(),
@@ -63,6 +91,21 @@ fn document_from_record(
         },
         blocks,
     })
+}
+
+fn document_body(kind: RecordKind, document: &JsonValue) -> Result<Vec<Block>, CliError> {
+    let mut blocks = Vec::new();
+    for (field, heading) in fields(kind) {
+        let value = document.get(*field).ok_or_else(|| {
+            CliError::Message(format!("record document is missing field '{field}'"))
+        })?;
+        blocks.push(Block::Heading {
+            level: 2,
+            text: (*heading).into(),
+        });
+        blocks.extend(section_blocks(value)?);
+    }
+    Ok(blocks)
 }
 
 fn section_blocks(value: &JsonValue) -> Result<Vec<Block>, CliError> {
