@@ -1,5 +1,4 @@
-#![allow(clippy::disallowed_types)]
-
+mod connection;
 mod mutations;
 mod queries;
 mod validate;
@@ -7,11 +6,12 @@ mod validate;
 use chrono::Utc;
 use records::{Record, RecordId, ValidationError};
 use refinery::embed_migrations;
-use rusqlite::{Connection, Row, Transaction};
+use rusqlite::{Row, Transaction};
 use serde::Serialize;
 use serde_json::Value as JsonValue;
-use std::path::Path;
 use thiserror::Error;
+
+pub use connection::Store;
 
 embed_migrations!("migrations");
 
@@ -48,32 +48,6 @@ impl From<ValidationError> for StoreError {
 impl From<serde_json::Error> for StoreError {
     fn from(e: serde_json::Error) -> Self {
         Self::Json(e)
-    }
-}
-
-pub struct Store {
-    conn: Connection,
-}
-
-impl Store {
-    pub fn open(path: impl AsRef<Path>) -> Result<Self, StoreError> {
-        let conn = Connection::open(path)?;
-        Self::configure(conn)
-    }
-
-    pub fn open_memory() -> Result<Self, StoreError> {
-        Self::configure(Connection::open_in_memory()?)
-    }
-
-    fn configure(mut conn: Connection) -> Result<Self, StoreError> {
-        conn.pragma_update(None, "journal_mode", "WAL")?;
-        conn.pragma_update(None, "synchronous", "NORMAL")?;
-        conn.pragma_update(None, "foreign_keys", "ON")?;
-        conn.busy_timeout(std::time::Duration::from_secs(5))?;
-        migrations::runner()
-            .run(&mut conn)
-            .map_err(StoreError::Migration)?;
-        Ok(Self { conn })
     }
 }
 

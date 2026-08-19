@@ -9,12 +9,16 @@
 # Do not assume a real graph-level boundary exists here the way it does between
 # substrate's app/* and runtime/* crates, where the dependency is genuinely absent.
 #
-# The only permitted naming sites are:
-#   - store/: the crate that owns and defines connection handling
-#     (#![allow(clippy::disallowed_types)] at the crate root in store/src/lib.rs)
-#   - cli/: the composition root (exempts itself via
-#     #![allow(clippy::disallowed_types)] at the point it opens the one connection
-#     the process uses)
+# The only permitted naming site is store/src/connection.rs, the module that
+# owns Store::open/open_memory/configure and the Connection field itself
+# (#![allow(clippy::disallowed_types)], scoped to that module only — not the
+# whole store crate, so mutations.rs/queries.rs/validate.rs stay covered by
+# the lint even though they're in the same crate).
+#
+# cli/ does not need an allow and does not have one: it never names
+# rusqlite::Connection anywhere, only ever calling Store::open. If that ever
+# changes, the allow belongs on the specific construction site, not the
+# crate root — same reasoning as store/src/connection.rs.
 #
 # Adding a type here signals it is gated: it belongs in store/ and may only appear
 # at the composition root otherwise. Removing or bypassing an entry requires an
