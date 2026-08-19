@@ -1,9 +1,13 @@
 ---
-id: ADR-0005
-title: MCP adapter is deferred, not part of the initial build
+id: "ADR-0005"
+title: "MCP adapter is deferred, not part of the initial build"
+record-type: adr
 status: accepted
-date: 2026-08-18
-derived-from: PDR-0001
+revision: 2
+date: 2026-08-19
+slug: mcp-adapter-is-deferred-not-part-of-the-initial-build
+tags: []
+relationships: {}
 ---
 
 # ADR-0005: MCP adapter is deferred, not part of the initial build
@@ -25,12 +29,6 @@ implemented independently of the CLI's validation, which would undermine ADR-000
 CLI-only mutation boundary if not built carefully — easier to avoid by not building it
 yet than by building it carefully under time pressure.
 
-## Considered Options
-
-- **Build an MCP adapter alongside the CLI from the start.**
-- **Defer the MCP adapter until the CLI and application core are proven under real
-  use, and a concrete integration need justifies it.**
-
 ## Decision
 
 We will not build an MCP adapter as part of Strata's initial build. The CLI is the
@@ -38,6 +36,12 @@ only interface for v0.1 (PDR-0001's scope cut). An MCP adapter may be added late
 only once it can be built as a thin layer calling the same application-core services
 the CLI calls (per the specification's own constraint, section 17) — not as an
 independently-validated second write path.
+
+## Considered Options
+
+- **Build an MCP adapter alongside the CLI from the start.**
+- **Defer the MCP adapter until the CLI and application core are proven under real
+  use, and a concrete integration need justifies it.**
 
 ## Consequences
 

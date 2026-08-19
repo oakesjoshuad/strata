@@ -1,9 +1,13 @@
 ---
-id: ADR-0001
-title: SQLite as Strata's canonical persistent store
+id: "ADR-0001"
+title: "SQLite as Strata's canonical persistent store"
+record-type: adr
 status: accepted
-date: 2026-08-18
-derived-from: PDR-0001
+revision: 2
+date: 2026-08-19
+slug: sqlite-as-strata-s-canonical-persistent-store
+tags: []
+relationships: {}
 ---
 
 # ADR-0001: SQLite as Strata's canonical persistent store
@@ -25,12 +29,6 @@ EDR; find every PDR with no resulting decision), full-text search, and referenti
 integrity between records (a relationship cannot point at a record that doesn't
 exist) — all as first-class, not hand-rolled, capabilities.
 
-## Considered Options
-
-- **Files only** (one Markdown or JSON file per record, git as the only store).
-- **Embedded key-value store** (e.g. `redb`).
-- **SQLite** (the specification's proposal).
-
 ## Decision
 
 We will use SQLite as Strata's canonical persistent store, via a single local database
@@ -49,6 +47,12 @@ by a single identifier. A key-value store would mean re-implementing a query lay
 a relationship graph, and search indexing on top of it by hand; SQLite already
 provides SQL joins, foreign key constraints, and FTS5 as built-in facilities that
 directly match what Strata needs, without Strata having to build them.
+
+## Considered Options
+
+- **Files only** (one Markdown or JSON file per record, git as the only store).
+- **Embedded key-value store** (e.g. `redb`).
+- **SQLite** (the specification's proposal).
 
 ## Consequences
 

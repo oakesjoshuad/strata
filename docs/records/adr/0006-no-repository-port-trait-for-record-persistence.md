@@ -1,9 +1,13 @@
 ---
-id: ADR-0006
-title: No repository port trait for record persistence
+id: "ADR-0006"
+title: "No repository port trait for record persistence"
+record-type: adr
 status: accepted
+revision: 2
 date: 2026-08-19
-derived-from: PDR-0001
+slug: no-repository-port-trait-for-record-persistence
+tags: []
+relationships: {}
 ---
 
 # ADR-0006: No repository port trait for record persistence
@@ -24,14 +28,6 @@ no corresponding benefit: nothing is ever substituted behind it, and test isolat
 is already available for free through SQLite's `:memory:` connections without a
 second implementation to provide it.
 
-## Considered Options
-
-- **Repository port trait** — a `RecordRepository` trait implemented once by the
-  store crate, called through `&dyn RecordRepository` or a generic type parameter
-  from the CLI.
-- **Concrete functions** — a plain `Store` type owned by the store crate, with
-  inherent methods called directly.
-
 ## Decision
 
 We will not introduce a repository trait. The store crate exposes a concrete `Store`
@@ -40,6 +36,14 @@ type with plain methods (`create`, `get`, `revise`, `set_status`, `link`, `histo
 calls its methods directly. No `dyn Trait` and no generic type parameter exists
 anywhere in the codebase to abstract over "the storage implementation," because
 there is only one.
+
+## Considered Options
+
+- **Repository port trait** — a `RecordRepository` trait implemented once by the
+  store crate, called through `&dyn RecordRepository` or a generic type parameter
+  from the CLI.
+- **Concrete functions** — a plain `Store` type owned by the store crate, with
+  inherent methods called directly.
 
 ## Consequences
 

@@ -1,14 +1,28 @@
 ---
-id: PDR-0001
-title: Strata system design
+id: "PDR-0001"
+title: "Strata system design"
+record-type: pdr
 status: approved
-date: 2026-08-18
-derived-from: RFC-0001
+revision: 3
+date: 2026-08-19
+slug: strata-system-design
+tags: []
+relationships:
+  produces:
+    - "ADR-0001"
+    - "ADR-0002"
+    - "ADR-0003"
+    - "ADR-0004"
+    - "ADR-0005"
+    - "ADR-0006"
+    - "ADR-0007"
+    - "EDR-0001"
+    - "EDR-0002"
 ---
 
 # PDR-0001: Strata system design
 
-## Context and Scope
+## Problem
 
 RFC-0001 decided that Strata should exist: a Rust CLI over a SQLite knowledge base for
 RFC/PDR/ADR/EDR records, replacing Markdown-file-and-convention tooling. This document
@@ -21,7 +35,23 @@ This document assumes a single local user and a single local SQLite file. It doe
 cover multi-user access, network exposure, or hosted deployment — none of those are in
 scope for the first version, and nothing here should be read as ruling them out later.
 
-## Goals and Non-Goals
+## Requirements
+
+Carried directly from `docs/specification.md` section 5 (record semantics) and section
+30 (security and trust boundary):
+
+- Each record kind (RFC, PDR, ADR, EDR) has its own required document fields and its
+  own lifecycle states; infrastructure (identity, storage, revisioning, search) is
+  shared across kinds.
+- Identifiers are `(kind, number)` pairs, unique per kind, allocated transactionally
+  (EDR-0001).
+- Relationships between records are explicit graph edges, not prose conventions —
+  `derived-from`, `produces`, `constrains`, `supersedes`, and similar (spec section 7).
+- An LLM agent interacting with Strata gets the same validated CLI surface a human
+  gets. It is not trusted merely because it is using a documented skill (spec section
+  30) — every mutation goes through the same validation regardless of caller.
+
+## Constraints
 
 **Goals:**
 - A record can be created, revised, linked to other records, searched, and inspected
@@ -44,22 +74,6 @@ excluded from this document and from v0.1):
   is not a placeholder pending a better search backend, it is the actual plan unless a
   real retrieval failure shows FTS5 is insufficient.
 - An MCP adapter (ADR-0005).
-
-## Requirements
-
-Carried directly from `docs/specification.md` section 5 (record semantics) and section
-30 (security and trust boundary):
-
-- Each record kind (RFC, PDR, ADR, EDR) has its own required document fields and its
-  own lifecycle states; infrastructure (identity, storage, revisioning, search) is
-  shared across kinds.
-- Identifiers are `(kind, number)` pairs, unique per kind, allocated transactionally
-  (EDR-0001).
-- Relationships between records are explicit graph edges, not prose conventions —
-  `derived-from`, `produces`, `constrains`, `supersedes`, and similar (spec section 7).
-- An LLM agent interacting with Strata gets the same validated CLI surface a human
-  gets. It is not trusted merely because it is using a documented skill (spec section
-  30) — every mutation goes through the same validation regardless of caller.
 
 ## Proposed Design
 
@@ -102,6 +116,58 @@ tokenizer (EDR-0002). The searchable body is deterministically derived from the
 current structured document — search results reflect the same state `show` and
 `--json` output would, never a separately-maintained copy that can drift.
 
+## Components
+
+**Storage.** SQLite is the canonical store (ADR-0001). The core tables, adapted from
+the specification's representative schema (section 8):
+
+- `engineering_record` — `id`, `kind`, `number`, `title`, `status`, `document` (JSON,
+  `CHECK(json_valid(document))`), `revision`, `created_at`, `updated_at`,
+  `UNIQUE(kind, number)`.
+- `record_relation` — `source_id`, `relation`, `target_id`, with foreign keys into
+  `engineering_record` on both ends, so a relationship can never point at a record
+  that does not exist.
+- `record_revision` — `record_id`, `revision`, `document`, `changed_at`,
+  `changed_by`, `change_summary`. Every meaningful mutation preserves the prior
+  document state here before it is overwritten.
+- `evidence` and `code_reference` — first-class tables so a decision can cite a
+  benchmark, an experiment, an issue, or a specific file/line range, rather than
+  referencing them only in prose.
+
+**Record graph.** Relationships are edges with a typed `relation` column, not implicit
+cross-references inside document text. The initial relationship vocabulary is the
+spec's (section 7): `relates-to`, `derived-from`, `explored-by`, `produces`,
+`resolves`, `constrains`, `implements`, `implemented-by`, `supported-by`,
+`supersedes`. The graph stays flexible — an RFC is not required to produce a PDR, a
+PDR is not required to produce both an ADR and an EDR (spec section 7) — because
+forcing every idea through every stage would recreate the rigid pipeline this system
+is explicitly trying to avoid (spec section 2).
+
+**Application core and CLI.** Record lifecycle rules, identifier allocation,
+relationship validation, and revision semantics live in a Rust application core, not
+in the CLI parsing layer and not in SQL triggers. The CLI is one adapter over that
+core; nothing about the core assumes it is the only adapter, but no second adapter
+(MCP or otherwise) exists yet (ADR-0005). This split exists so that "what makes a
+mutation valid" has exactly one implementation, matching the spec's stated principle
+(section 3.4) that the CLI and any future adapter call the same application services
+rather than each re-implementing validation.
+
+**Search.** FTS5 over record title, body, and tags, using the `porter unicode61`
+tokenizer (EDR-0002). The searchable body is deterministically derived from the
+current structured document — search results reflect the same state `show` and
+`--json` output would, never a separately-maintained copy that can drift.
+
+## Interfaces
+
+**Application core and CLI.** Record lifecycle rules, identifier allocation,
+relationship validation, and revision semantics live in a Rust application core, not
+in the CLI parsing layer and not in SQL triggers. The CLI is one adapter over that
+core; nothing about the core assumes it is the only adapter, but no second adapter
+(MCP or otherwise) exists yet (ADR-0005). This split exists so that "what makes a
+mutation valid" has exactly one implementation, matching the spec's stated principle
+(section 3.4) that the CLI and any future adapter call the same application services
+rather than each re-implementing validation.
+
 ## Data Model
 
 A record's identity (`kind` + `number`) and lifecycle-relevant fields (`status`,
@@ -138,6 +204,24 @@ section does not repeat their content, only notes that files-only storage,
 CLI-plus-direct-SQL-access, and an embedded key-value store were all considered and
 rejected during this design pass, for the reasons those ADRs give.
 
+## Evidence
+
+Before this design counts as validated rather than merely proposed: a real end-to-end
+test that creates a record, revises it, links it to another record, and confirms all
+four tables (`engineering_record`, `record_revision`, `record_relation`, FTS index)
+reflect the change consistently — and a second test that forces a failure partway
+through a mutation and confirms nothing partially committed. Neither test exists yet;
+writing them is part of implementing this design, not a separate later concern.
+
+## Experiments
+
+Before this design counts as validated rather than merely proposed: a real end-to-end
+test that creates a record, revises it, links it to another record, and confirms all
+four tables (`engineering_record`, `record_revision`, `record_relation`, FTS index)
+reflect the change consistently — and a second test that forces a failure partway
+through a mutation and confirms nothing partially committed. Neither test exists yet;
+writing them is part of implementing this design, not a separate later concern.
+
 ## Risks
 
 - **Schema evolution.** Nothing in this design yet specifies what happens to an
@@ -155,27 +239,6 @@ rejected during this design pass, for the reasons those ADRs give.
 - **FTS5 relevance at scale.** Untested against real record volume. The non-goal on
   embeddings (spec section 9) is a bet that FTS5 is good enough; that bet is unverified
   until there's enough real content to test it against.
-
-## Verification
-
-Before this design counts as validated rather than merely proposed: a real end-to-end
-test that creates a record, revises it, links it to another record, and confirms all
-four tables (`engineering_record`, `record_revision`, `record_relation`, FTS index)
-reflect the change consistently — and a second test that forces a failure partway
-through a mutation and confirms nothing partially committed. Neither test exists yet;
-writing them is part of implementing this design, not a separate later concern.
-
-## v0.1 Scope Cut
-
-The specification describes seventeen implementation steps (section 32) ending in
-Pandoc publication and static-site generation. This design commits to a smaller first
-version: steps 1 through 9 of that sequence — Rust core, SQLite schema, JSON document
-types, transactional identifier allocation, revision history, the relationship graph,
-FTS5 indexing, the core CLI with JSON output, and self-description commands
-(`schema`, `capabilities`, `relationships`). The deterministic Pandoc renderer, the
-publication pipeline, static-site generation, and the optional MCP adapter are
-deliberately deferred past v0.1 — not cut, deferred, pending the core record store
-proving itself under real use first.
 
 ## Open Questions
 

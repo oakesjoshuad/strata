@@ -1,9 +1,13 @@
 ---
-id: ADR-0007
-title: Domain value objects implement ToSql/FromSql directly
+id: "ADR-0007"
+title: "Domain value objects implement ToSql/FromSql directly"
+record-type: adr
 status: accepted
+revision: 2
 date: 2026-08-19
-derived-from: PDR-0001
+slug: domain-value-objects-implement-tosql-fromsql-directly
+tags: []
+relationships: {}
 ---
 
 # ADR-0007: Domain value objects implement ToSql/FromSql directly
@@ -25,14 +29,6 @@ orphan rule only blocks foreign-trait-for-foreign-type, not
 foreign-trait-for-local-type. A `SqlCode<T>`-style wrapper would add a layer of
 indirection Strata does not need.
 
-## Considered Options
-
-- **Bridge wrapper** — define a local wrapper type in the store crate, mirroring
-  substrate's `SqlCode<T>`, and convert each domain value through it at the storage
-  boundary.
-- **Direct impl** — implement `rusqlite::types::ToSql` and `FromSql` directly on
-  `RecordKind`, `Status`, and `RecordId` in the records crate.
-
 ## Decision
 
 We will implement `ToSql` and `FromSql` directly on `RecordKind`, `Status`, and
@@ -48,6 +44,14 @@ tables (the record row, revision rows, relation rows, the FTS index) and has no
 single SQL value to convert to or from. Persisting it remains explicit
 multi-statement code in the store crate (`Store::create`, `Store::revise`), built
 from these value-level conversions.
+
+## Considered Options
+
+- **Bridge wrapper** — define a local wrapper type in the store crate, mirroring
+  substrate's `SqlCode<T>`, and convert each domain value through it at the storage
+  boundary.
+- **Direct impl** — implement `rusqlite::types::ToSql` and `FromSql` directly on
+  `RecordKind`, `Status`, and `RecordId` in the records crate.
 
 ## Consequences
 

@@ -1,10 +1,13 @@
 ---
-id: EDR-0002
-title: FTS5 configuration — porter unicode61 tokenizer, embeddings deferred
+id: "EDR-0002"
+title: "FTS5 configuration — porter unicode61 tokenizer, embeddings deferred"
+record-type: edr
 status: accepted
-date: 2026-08-18
-derived-from: PDR-0001
-constrained-by: ADR-0001
+revision: 2
+date: 2026-08-19
+slug: fts5-configuration-porter-unicode61-tokenizer-embeddings-deferre
+tags: []
+relationships: {}
 ---
 
 # EDR-0002: FTS5 configuration — porter unicode61 tokenizer, embeddings deferred
@@ -23,20 +26,6 @@ complexity." This EDR fixes the tokenizer choice and records the reasoning for t
 embeddings deferral in one place, since both are implementation-level engineering
 choices about the same feature rather than architectural ones.
 
-## Considered Options
-
-**Tokenizer:**
-- `unicode61` alone — Unicode-aware tokenization, no stemming (a search for "decide"
-  would not match a document containing "deciding").
-- `porter unicode61` — Unicode-aware tokenization plus Porter stemming, so related word
-  forms match each other.
-- `trigram` — substring/character-trigram matching, better for partial-word or
-  fuzzy matching, weaker for whole-word relevance ranking.
-
-**Semantic retrieval:**
-- FTS5 alone for the initial version.
-- FTS5 plus vector embeddings from the start.
-
 ## Decision
 
 We will configure the `engineering_record_fts` virtual table with
@@ -54,6 +43,20 @@ tokenizer was considered and set aside for the initial version — it solves a
 different problem (fuzzy or partial matching) than the one Strata has at launch,
 which is "match related word forms of a known term," not "match despite typos or
 partial input."
+
+## Considered Options
+
+**Tokenizer:**
+- `unicode61` alone — Unicode-aware tokenization, no stemming (a search for "decide"
+  would not match a document containing "deciding").
+- `porter unicode61` — Unicode-aware tokenization plus Porter stemming, so related word
+  forms match each other.
+- `trigram` — substring/character-trigram matching, better for partial-word or
+  fuzzy matching, weaker for whole-word relevance ranking.
+
+**Semantic retrieval:**
+- FTS5 alone for the initial version.
+- FTS5 plus vector embeddings from the start.
 
 ## Consequences
 

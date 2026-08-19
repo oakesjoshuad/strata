@@ -1,9 +1,13 @@
 ---
-id: ADR-0003
-title: Markdown and Pandoc output are generated projections, never canonical
+id: "ADR-0003"
+title: "Markdown and Pandoc output are generated projections, never canonical"
+record-type: adr
 status: accepted
-date: 2026-08-18
-derived-from: PDR-0001
+revision: 2
+date: 2026-08-19
+slug: markdown-and-pandoc-output-are-generated-projections-never-canon
+tags: []
+relationships: {}
 ---
 
 # ADR-0003: Markdown and Pandoc output are generated projections, never canonical
@@ -20,13 +24,6 @@ state lives in SQLite, not in files. This decision addresses a related but separ
 question: once SQLite is canonical, what is Markdown output *for*, and can it ever be
 edited directly.
 
-## Considered Options
-
-- **Markdown is canonical**, as in conventional ADR tooling — the file on disk is the
-  record, SQLite (if present at all) is a derived index.
-- **Markdown is a generated, read-only projection** of the SQLite record — produced by
-  a deterministic renderer, never hand-edited, regenerated whenever the record changes.
-
 ## Decision
 
 We will treat Markdown (and any Pandoc-derived output — HTML, PDF, DOCX) as a
@@ -36,6 +33,13 @@ byte-identical Markdown. If committed Markdown in git is checked into a reposito
 export, CI can verify it matches canonical state (`eng export --check`,
 `docs/specification.md` section 28) and fail if it doesn't — but nothing ever treats a
 divergence between the file and the database as "the file wins."
+
+## Considered Options
+
+- **Markdown is canonical**, as in conventional ADR tooling — the file on disk is the
+  record, SQLite (if present at all) is a derived index.
+- **Markdown is a generated, read-only projection** of the SQLite record — produced by
+  a deterministic renderer, never hand-edited, regenerated whenever the record changes.
 
 ## Consequences
 

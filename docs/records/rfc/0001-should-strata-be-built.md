@@ -1,18 +1,18 @@
 ---
-id: RFC-0001
-title: Should Strata be built?
+id: "RFC-0001"
+title: "Should Strata be built?"
+record-type: rfc
 status: accepted
-date: 2026-08-18
+revision: 4
+date: 2026-08-19
+slug: should-strata-be-built
+tags: []
+relationships:
+  produces:
+    - "PDR-0001"
 ---
 
 # RFC-0001: Should Strata be built?
-
-## Summary
-
-Build a local-first Rust CLI backed by a SQLite knowledge base for recording
-engineering reasoning — RFCs, PDRs, ADRs, and EDRs — as structured, queryable records
-instead of hand-maintained Markdown files. Markdown becomes a generated projection of
-that database, not the source of truth.
 
 ## Motivation
 
@@ -46,6 +46,19 @@ happened; it took a dedicated audit pass to find it after the fact.
 Strata exists to make the write path itself the thing that prevents these failures,
 rather than relying on a human or a separate audit to catch them afterward.
 
+## Problem
+
+Underneath both failures is the same root cause: treating decision records as prose
+files edited by convention, with no application layer that understands their structure,
+lifecycle, or relationships. Records accumulate, but nothing enforces that they stay
+internally consistent — a 2026-08-18 audit of `substrate`'s 102 existing ADRs found 29
+that bundle more than one independently decidable choice into a single record, with the
+worst case bundling nine. Nothing about the Markdown-file approach caught this as it
+happened; it took a dedicated audit pass to find it after the fact.
+
+Strata exists to make the write path itself the thing that prevents these failures,
+rather than relying on a human or a separate audit to catch them afterward.
+
 ## Scope
 
 - A Rust CLI binary (`strata`) as the only interface for creating, revising, linking,
@@ -60,6 +73,23 @@ rather than relying on a human or a separate audit to catch them afterward.
   git without requiring the CLI to be installed to read them.
 
 ## Non-Goals
+
+Carried from the originating specification (`docs/specification.md`, section 31) and
+still accurate at the point of writing this RFC:
+
+- No server, no SaaS component, no multi-user concurrent-write story beyond what a
+  single local SQLite file already provides.
+- No vector database, no embeddings, until a measured retrieval failure justifies the
+  added complexity.
+- No MCP adapter at launch (see ADR-0005).
+- No web application framework, no JavaScript runtime.
+- No automatic enforcement of *other* projects' source-code architecture rules —
+  Strata records engineering knowledge, it does not lint the codebases that knowledge
+  is about.
+
+## Constraints
+
+The scope is bounded by the non-goals stated in this RFC:
 
 Carried from the originating specification (`docs/specification.md`, section 31) and
 still accurate at the point of writing this RFC:

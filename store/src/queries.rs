@@ -4,6 +4,14 @@ use records::{Record, RecordId, Relationship, Revision, RELATIONSHIPS};
 use rusqlite::OptionalExtension;
 
 impl Store {
+    pub fn all_records(&self) -> Result<Vec<Record>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, title, slug, status, document, revision, created_at, updated_at FROM engineering_record ORDER BY id",
+        )?;
+        let rows = stmt.query_map(rusqlite::named_params! {}, record_from_row)?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
+    }
+
     pub fn get(&self, id: &RecordId) -> Result<Record, StoreError> {
         self.conn
             .query_row(

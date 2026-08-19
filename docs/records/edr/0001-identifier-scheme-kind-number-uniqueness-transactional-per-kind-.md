@@ -1,10 +1,13 @@
 ---
-id: EDR-0001
-title: Identifier scheme — (kind, number) uniqueness, transactional per-kind allocation
+id: "EDR-0001"
+title: "Identifier scheme — (kind, number) uniqueness, transactional per-kind allocation"
+record-type: edr
 status: accepted
-date: 2026-08-18
-derived-from: PDR-0001
-constrained-by: ADR-0001
+revision: 2
+date: 2026-08-19
+slug: identifier-scheme-kind-number-uniqueness-transactional-per-kind-
+tags: []
+relationships: {}
 ---
 
 # EDR-0001: Identifier scheme — (kind, number) uniqueness, transactional per-kind allocation
@@ -25,13 +28,6 @@ the same transaction as the record insert, so no two records in the same kind ca
 be assigned the same number, even if that were somehow attempted twice in quick
 succession.
 
-## Considered Options
-
-- **Numbers picked by the caller** (a human or agent specifies `RFC-0007` explicitly
-  when creating a record).
-- **Numbers allocated by the application core**, transactionally, as `MAX(number) + 1`
-  within the target kind, inside the same transaction that inserts the new record.
-
 ## Decision
 
 We will allocate identifier numbers in the application core, not accept them from the
@@ -41,6 +37,13 @@ exist), and inserts the new `engineering_record` row with that `(kind, number)` 
 the same transaction — enforced additionally by the `UNIQUE(kind, number)` constraint
 from ADR-0001's schema, so even a mistake in the allocation logic itself cannot produce
 a duplicate.
+
+## Considered Options
+
+- **Numbers picked by the caller** (a human or agent specifies `RFC-0007` explicitly
+  when creating a record).
+- **Numbers allocated by the application core**, transactionally, as `MAX(number) + 1`
+  within the target kind, inside the same transaction that inserts the new record.
 
 ## Consequences
 

@@ -44,6 +44,10 @@ pub(crate) enum Command {
     Render {
         id: String,
     },
+    Export {
+        #[arg(long)]
+        check: bool,
+    },
     History {
         id: String,
     },

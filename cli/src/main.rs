@@ -1,5 +1,6 @@
 mod args;
 mod document;
+mod export;
 mod output;
 mod render;
 
@@ -114,6 +115,7 @@ fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
         Command::Render { id } => {
             print!("{}", render_record(store, &parse_id(&id)?)?);
         }
+        Command::Export { check } => export::run(store, check)?,
         Command::History { id } => {
             for revision in store.history(&parse_id(&id)?)? {
                 println!(

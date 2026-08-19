@@ -123,18 +123,20 @@ to disambiguate on crates.io.
 ## Record-keeping discipline
 
 This repository does not use `substrate`'s `adrs` MCP tool or any automated
-ADR-management server. Strata hand-writes its own RFC/PDR/ADR/EDR records under
-`docs/records/{rfc,pdr,adr,edr}/`, following the templates researched in
+ADR-management server. Strata's canonical RFC/PDR/ADR/EDR records live in SQLite;
+the Markdown files under `docs/records/{rfc,pdr,adr,edr}/` are generated projections
+produced by `strata export` and verified by `strata export --check`. They are not
+edited directly. The renderer follows the templates researched in
 `docs/research/template-research.md`. This is deliberate, not an oversight — the
 incident that motivated Strata's own existence (RFC-0001) was exactly this kind
 of tool silently corrupting a record on write.
 
 Each ADR or EDR documents **exactly one decision**. If a change bundles two
 independently-acceptable choices, write two records, not one record with two
-decisions in its `## Decision` section. Frontmatter carries `id`, `title`,
-`status`, `date`, and `derived-from`; status lives in frontmatter only — never as
-a `## Status` heading in the body, that field is redundant with the frontmatter
-and has been stripped everywhere it appeared.
+decisions in its `## Decision` section. Generated frontmatter carries the canonical
+identity, title, kind, status, revision, date, persisted slug, tags, and relationships.
+Status lives in frontmatter only — never as a `## Status` heading in the body, that
+field is redundant with the frontmatter and has been stripped everywhere it appeared.
 
 ## SQLite connection convention
 

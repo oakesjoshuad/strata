@@ -1,9 +1,13 @@
 ---
-id: ADR-0002
-title: CLI-only mutation boundary
+id: "ADR-0002"
+title: "CLI-only mutation boundary"
+record-type: adr
 status: accepted
-date: 2026-08-18
-derived-from: PDR-0001
+revision: 2
+date: 2026-08-19
+slug: cli-only-mutation-boundary
+tags: []
+relationships: {}
 ---
 
 # ADR-0002: CLI-only mutation boundary
@@ -25,13 +29,6 @@ same failure: a mutation that leaves the record, its revision history, its
 relationships, or its search index inconsistent with each other, with nothing to
 refuse it.
 
-## Considered Options
-
-- **Unrestricted access** — any caller (human, script, LLM agent) may open the SQLite
-  database directly and read or write it with ordinary SQL.
-- **CLI-only mutation** — all writes go through the `strata` binary's validated
-  commands; nothing else is permitted to write to the database.
-
 ## Decision
 
 We will require every mutation — record creation, revision, status transition, and
@@ -44,6 +41,13 @@ merely because it is using a documented skill or workflow.
 Read access may be more permissive in practice (nothing stops a human from opening the
 database file read-only to inspect it), but the write path has exactly one door, and
 that door validates schema, lifecycle, and relationships before anything commits.
+
+## Considered Options
+
+- **Unrestricted access** — any caller (human, script, LLM agent) may open the SQLite
+  database directly and read or write it with ordinary SQL.
+- **CLI-only mutation** — all writes go through the `strata` binary's validated
+  commands; nothing else is permitted to write to the database.
 
 ## Consequences
 

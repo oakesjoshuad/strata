@@ -221,6 +221,10 @@ fn render_document(document: &Document) -> String {
             }
         }
     }
+    while output.ends_with('\n') {
+        output.pop();
+    }
+    output.push('\n');
     output
 }
 

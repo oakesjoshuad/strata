@@ -1,9 +1,13 @@
 ---
-id: ADR-0004
-title: Strata owns its own static-site information architecture instead of mdBook
+id: "ADR-0004"
+title: "Strata owns its own static-site information architecture instead of mdBook"
+record-type: adr
 status: accepted
-date: 2026-08-18
-derived-from: PDR-0001
+revision: 2
+date: 2026-08-19
+slug: strata-owns-its-own-static-site-information-architecture-instead
+tags: []
+relationships: {}
 ---
 
 # ADR-0004: Strata owns its own static-site information architecture instead of mdBook
@@ -26,6 +30,14 @@ edges between records, all queryable. Choosing a site generator is really a choi
 about who gets to decide navigation: a hand-maintained table of contents, or a query
 over the graph Strata already has.
 
+## Decision
+
+We will have Strata's own application generate site navigation, indexes, and views
+directly from the record graph, rather than adopting mdBook's fixed hierarchy. Pandoc
+remains the document-level renderer (individual pages), but page *selection* and
+*navigation structure* are computed from Strata's own data — record kind, status, tags,
+and relationships — not authored by hand in a separate table-of-contents file.
+
 ## Considered Options
 
 - **mdBook**, as already used elsewhere in this lineage of projects. Static-site
@@ -35,14 +47,6 @@ over the graph Strata already has.
   indexes, and multiple graph-derived views (by chronology, subsystem, record kind,
   RFC lineage, tag, status) itself, with Pandoc doing document-level rendering only
   (`docs/specification.md`, section 27).
-
-## Decision
-
-We will have Strata's own application generate site navigation, indexes, and views
-directly from the record graph, rather than adopting mdBook's fixed hierarchy. Pandoc
-remains the document-level renderer (individual pages), but page *selection* and
-*navigation structure* are computed from Strata's own data — record kind, status, tags,
-and relationships — not authored by hand in a separate table-of-contents file.
 
 ## Consequences
 
