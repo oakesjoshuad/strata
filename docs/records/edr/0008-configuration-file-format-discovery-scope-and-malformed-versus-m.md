@@ -2,8 +2,8 @@
 id: "EDR-0008"
 title: "Configuration file format, discovery, scope, and malformed-versus-missing handling"
 record-type: edr
-status: proposed
-revision: 1
+status: accepted
+revision: 3
 date: 2026-08-19
 slug: configuration-file-format-discovery-scope-and-malformed-versus-m
 tags: []
