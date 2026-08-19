@@ -12,3 +12,4 @@ serde_json.workspace = true
 records = { path = "../records" }
 kernel = { path = "../kernel" }
 thiserror.workspace = true
+unicode-normalization.workspace = true

@@ -7,7 +7,7 @@ impl Store {
     pub fn get(&self, id: &RecordId) -> Result<Record, StoreError> {
         self.conn
             .query_row(
-                "SELECT id, title, status, document, revision, created_at, updated_at FROM engineering_record WHERE id = :id",
+                "SELECT id, title, slug, status, document, revision, created_at, updated_at FROM engineering_record WHERE id = :id",
                 rusqlite::named_params! { ":id": id },
                 record_from_row,
             )
@@ -48,7 +48,7 @@ impl Store {
             ":offset",
             rusqlite::types::Value::Integer(i64::from(offset)),
         );
-        let sql = format!("SELECT r.id, r.title, r.status, r.document, r.revision, r.created_at, r.updated_at FROM engineering_record r JOIN engineering_record_fts ON engineering_record_fts.record_id = r.id WHERE {} ORDER BY rank LIMIT :limit OFFSET :offset", where_builder.sql());
+        let sql = format!("SELECT r.id, r.title, r.slug, r.status, r.document, r.revision, r.created_at, r.updated_at FROM engineering_record r JOIN engineering_record_fts ON engineering_record_fts.record_id = r.id WHERE {} ORDER BY rank LIMIT :limit OFFSET :offset", where_builder.sql());
         let mut stmt = self.conn.prepare(&sql)?;
         for (name, value) in where_builder.bindings() {
             stmt.raw_bind_parameter(name.as_str(), value)?;
@@ -79,6 +79,18 @@ impl Store {
 
     pub fn relationships(&self) -> &'static [&'static str] {
         &RELATIONSHIPS
+    }
+
+    pub fn outgoing_relationships(&self, id: &RecordId) -> Result<Vec<Relationship>, StoreError> {
+        let mut stmt = self.conn.prepare("SELECT source_id, relation, target_id FROM record_relation WHERE source_id = :id ORDER BY relation, target_id")?;
+        let rows = stmt.query_map(rusqlite::named_params! { ":id": id }, |row| {
+            Ok(Relationship {
+                source_id: row.get(0)?,
+                relation: row.get(1)?,
+                target_id: row.get(2)?,
+            })
+        })?;
+        Ok(rows.collect::<Result<Vec<_>, _>>()?)
     }
 }
 

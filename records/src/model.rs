@@ -6,6 +6,7 @@ use serde_json::Value as JsonValue;
 pub struct Record {
     pub id: RecordId,
     pub title: String,
+    pub slug: String,
     pub status: Status,
     pub document: JsonValue,
     pub revision: u32,

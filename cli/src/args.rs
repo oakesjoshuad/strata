@@ -41,6 +41,9 @@ pub(crate) enum Command {
         #[arg(long)]
         json: bool,
     },
+    Render {
+        id: String,
+    },
     History {
         id: String,
     },

@@ -1,6 +1,7 @@
 mod connection;
 mod mutations;
 mod queries;
+mod slug;
 mod validate;
 
 use chrono::Utc;
@@ -62,13 +63,14 @@ pub(crate) fn record_from_row(row: &Row<'_>) -> rusqlite::Result<Record> {
     Ok(Record {
         id,
         title: row.get(1)?,
-        status: row.get(2)?,
-        document: serde_json::from_str(&row.get::<_, String>(3)?).map_err(|e| {
-            rusqlite::Error::FromSqlConversionFailure(3, rusqlite::types::Type::Text, Box::new(e))
+        slug: row.get(2)?,
+        status: row.get(3)?,
+        document: serde_json::from_str(&row.get::<_, String>(4)?).map_err(|e| {
+            rusqlite::Error::FromSqlConversionFailure(4, rusqlite::types::Type::Text, Box::new(e))
         })?,
-        revision: row.get(4)?,
-        created_at: row.get(5)?,
-        updated_at: row.get(6)?,
+        revision: row.get(5)?,
+        created_at: row.get(6)?,
+        updated_at: row.get(7)?,
     })
 }
 

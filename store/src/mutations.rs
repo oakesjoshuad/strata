@@ -1,4 +1,4 @@
-use crate::{index_record, insert_revision, timestamp, Store, StoreError};
+use crate::{index_record, insert_revision, slug, timestamp, Store, StoreError};
 use records::{
     validate_document, validate_relationship, validate_transition, Record, RecordId, RecordKind,
     Relationship, Status, ValidationError,
@@ -23,9 +23,10 @@ impl Store {
             |r| r.get(0),
         )?;
         let id = RecordId::new(kind, number);
+        let slug = slug::slugify(title);
         let now = timestamp();
         let doc = serde_json::to_string(&document)?;
-        tx.execute("INSERT INTO engineering_record (id, kind, number, title, status, document, revision, created_at, updated_at) VALUES (:id, :kind, :number, :title, :status, :document, :revision, :created_at, :updated_at)", rusqlite::named_params! { ":id": id, ":kind": kind, ":number": number, ":title": title, ":status": kind.initial_status(), ":document": doc, ":revision": 1, ":created_at": &now, ":updated_at": &now })?;
+        tx.execute("INSERT INTO engineering_record (id, kind, number, title, slug, status, document, revision, created_at, updated_at) VALUES (:id, :kind, :number, :title, :slug, :status, :document, :revision, :created_at, :updated_at)", rusqlite::named_params! { ":id": id, ":kind": kind, ":number": number, ":title": title, ":slug": slug, ":status": kind.initial_status(), ":document": doc, ":revision": 1, ":created_at": &now, ":updated_at": &now })?;
         insert_revision(&tx, &id, 1, &document, "created")?;
         index_record(&tx, &id, title, &document)?;
         tx.commit()?;

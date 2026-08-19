@@ -1,5 +1,7 @@
 mod args;
+mod document;
 mod output;
+mod render;
 
 use args::{Cli, Command};
 use clap::Parser;
@@ -7,6 +9,7 @@ use output::{
     emit_json, output_capabilities, output_relationships, output_schema, print_graph, print_value,
 };
 use records::{RecordId, RecordKind, Status};
+use render::render_record;
 use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
@@ -107,6 +110,9 @@ fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
         } => {
             let graph = store.graph(&parse_id(&id)?)?;
             print_graph(graph, json_flag)?;
+        }
+        Command::Render { id } => {
+            print!("{}", render_record(store, &parse_id(&id)?)?);
         }
         Command::History { id } => {
             for revision in store.history(&parse_id(&id)?)? {

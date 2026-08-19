@@ -1,0 +1,1 @@
+ALTER TABLE engineering_record ADD COLUMN slug TEXT NOT NULL DEFAULT '';
