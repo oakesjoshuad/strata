@@ -3,7 +3,7 @@ id: "RFC-0004"
 title: "Define workflow and lifecycle policy across record kinds"
 record-type: rfc
 status: proposed
-revision: 2
+revision: 3
 date: 2026-08-19
 slug: define-workflow-and-lifecycle-policy-across-record-kinds
 tags: []
@@ -144,7 +144,7 @@ validation already covers it.
 If ADR expands from Architecture to Any, the eventual decision record must
 revisit the ADR purpose string at `records/src/kind.rs:37-43`, the ADR entry in
 `docs/specification.md:232-249`, and the `KindArg::Adr` documentation in
-`cli/src/args.rs:219`. This RFC flags those consequences; it does not edit them.
+`cli/src/args.rs:208-209`. This RFC flags those consequences; it does not edit them.
 
 ## Alternatives Considered
 
