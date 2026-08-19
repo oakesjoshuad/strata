@@ -1,0 +1,16 @@
+disallowed-types = [
+    { path = "rusqlite::Connection", reason = "Direct SQLite access is confined to store and cli's composition root. See the CLI-only-mutation-boundary and no-repository-trait decisions." },
+]
+
+[[disallowed-methods]]
+path = "core::result::Result::unwrap_or"
+reason = "Do not turn a validation failure into a default; return the typed error."
+
+[[disallowed-methods]]
+path = "core::result::Result::unwrap_or_default"
+reason = "Do not turn a validation failure into a default; return the typed error."
+
+[[disallowed-methods]]
+path = "core::result::Result::unwrap_or_else"
+reason = "Do not turn a validation failure into a default; return the typed error."
+

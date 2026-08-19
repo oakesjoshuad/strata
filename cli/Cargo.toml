@@ -1,0 +1,13 @@
+[package]
+name = "strata"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+clap.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+strata-records = { path = "../records" }
+strata-store = { path = "../store" }
+thiserror.workspace = true
