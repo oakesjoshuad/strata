@@ -76,12 +76,13 @@ pub(crate) fn print_code_reference(
 }
 
 pub(crate) fn output_schema(kind: RecordKind, json_flag: bool) -> Result<(), CliError> {
-    let value = json!({"kind": kind, "schema": format!("{}/v1", kind.slug()), "required_fields": kind.required_fields(), "statuses": kind.statuses()});
+    let value = json!({"kind": kind, "purpose": kind.purpose(), "schema": format!("{}/v1", kind.slug()), "required_fields": kind.required_fields(), "statuses": kind.statuses()});
     emit_json(value, json_flag)
 }
 
 pub(crate) fn output_capabilities(json_flag: bool) -> Result<(), CliError> {
-    let value = json!({"version": build_version(), "kinds": RecordKind::ALL, "commands": ["init", "new", "show", "search", "graph", "render", "export", "template", "history", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"]});
+    let kinds = RecordKind::ALL.map(|kind| json!({"kind": kind, "purpose": kind.purpose()}));
+    let value = json!({"version": build_version(), "kinds": kinds, "commands": ["init", "new", "show", "search", "graph", "render", "export", "template", "history", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"]});
     emit_json(value, json_flag)
 }
 

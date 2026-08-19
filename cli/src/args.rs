@@ -201,9 +201,13 @@ pub(crate) enum Command {
 
 #[derive(Clone, ValueEnum)]
 pub(crate) enum KindArg {
+    /// Should this problem or proposal be pursued?
     Rfc,
+    /// What does the proposed design look like and what evidence supports it?
     Pdr,
+    /// What architecturally significant choice was made and why?
     Adr,
+    /// What implementation-level engineering choice was made?
     Edr,
 }
 

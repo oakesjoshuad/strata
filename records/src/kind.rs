@@ -34,6 +34,15 @@ impl RecordKind {
         }
     }
 
+    pub fn purpose(self) -> &'static str {
+        match self {
+            Self::Rfc => "Should this problem or proposal be pursued?",
+            Self::Pdr => "What does the proposed design look like and what evidence supports it?",
+            Self::Adr => "What architecturally significant choice was made and why?",
+            Self::Edr => "What implementation-level engineering choice was made?",
+        }
+    }
+
     pub fn slug(self) -> &'static str {
         match self {
             Self::Rfc => "rfc",
@@ -177,6 +186,13 @@ mod tests {
             assert_eq!(RecordKind::from_str(&string.to_ascii_lowercase()), Ok(kind));
         }
         assert_eq!(RecordKind::from_str("rFc"), Ok(RecordKind::Rfc));
+    }
+
+    #[test]
+    fn record_kind_purposes_are_non_empty() {
+        for kind in RecordKind::ALL {
+            assert!(!kind.purpose().is_empty(), "{kind} has an empty purpose");
+        }
     }
 
     #[test]

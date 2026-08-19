@@ -61,6 +61,17 @@ where
         .expect("run strata")
 }
 
+fn run_without_database<I, S>(args: I) -> Output
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    Command::new(env!("CARGO_BIN_EXE_strata"))
+        .args(args)
+        .output()
+        .expect("run strata")
+}
+
 fn output_text(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
 }
@@ -145,4 +156,28 @@ fn auxiliary_commands_report_validation_errors() {
     );
     assert!(!code_reference.status.success());
     assert!(output_text(&code_reference).contains("unsupported relationship"));
+}
+
+#[test]
+fn schema_json_includes_kind_purpose() {
+    let output = run_without_database(["schema", "adr", "--json"]);
+    assert!(output.status.success(), "{}", output_text(&output));
+    let schema: Value = serde_json::from_slice(&output.stdout).expect("schema JSON");
+    assert_eq!(
+        schema["purpose"],
+        "What architecturally significant choice was made and why?"
+    );
+}
+
+#[test]
+fn capabilities_json_describes_all_kind_purposes() {
+    let output = run_without_database(["capabilities", "--json"]);
+    assert!(output.status.success(), "{}", output_text(&output));
+    let capabilities: Value = serde_json::from_slice(&output.stdout).expect("capabilities JSON");
+    let kinds = capabilities["kinds"].as_array().expect("kind descriptions");
+    assert_eq!(kinds.len(), 4);
+    for kind in kinds {
+        assert!(kind["kind"].is_string());
+        assert!(!kind["purpose"].as_str().expect("purpose").is_empty());
+    }
 }
