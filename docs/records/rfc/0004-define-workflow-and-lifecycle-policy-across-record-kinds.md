@@ -10,6 +10,7 @@ tags: []
 relationships:
   produces:
     - "ADR-0015"
+    - "ADR-0016"
     - "EDR-0007"
   relates-to:
     - "PDR-0001"
