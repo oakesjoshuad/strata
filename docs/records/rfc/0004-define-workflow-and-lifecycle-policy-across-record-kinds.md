@@ -2,8 +2,8 @@
 id: "RFC-0004"
 title: "Define workflow and lifecycle policy across record kinds"
 record-type: rfc
-status: proposed
-revision: 8
+status: accepted
+revision: 12
 date: 2026-08-19
 slug: define-workflow-and-lifecycle-policy-across-record-kinds
 tags: []
@@ -34,9 +34,9 @@ The lifecycle asymmetry is no longer open. EDR-0007 added Draft to ADR and EDR, 
 
 ## Scope
 
-This RFC proposes policy for a checkable but initially advisory form of cross-kind traceability, the interaction between that signal and retroactive records, and a follow-on re-evaluation of ADR and EDR scope.
+This RFC defines policy for a checkable but advisory form of cross-kind traceability, the interaction between that signal and retroactive records, and the classification boundary between ADR and EDR.
 
-EDR-0007 resolves the draft-status question, and RFC-0003, ADR-0014, and EDR-0008 resolve the configuration boundary. Published-versus-Committed remains outside this RFC and should receive its own proposal if it proves valuable.
+EDR-0007, ADR-0015, and ADR-0016 resolve those workflow questions. RFC-0003, ADR-0014, and EDR-0008 resolve the configuration boundary. Published-versus-Committed remains outside this RFC and should receive its own proposal if it proves valuable.
 
 ## Non-Goals
 
@@ -76,9 +76,7 @@ Treat workflow policy as a set of explicit, inspectable conventions rather than 
 
 2. Use ADR-0015's advisory traceability policy. Accepted ADR/EDR records without incoming produces or derived-from lineage from an RFC/PDR receive a warning; the warning does not block lifecycle changes, and standalone or retroactive records remain valid.
 
-3. Re-examine the ADR/EDR boundary as a separate follow-on decision. The live choices are to retain the split with a concrete classification test, broaden ADR to Any Decision Record while retaining EDR for genuinely novel implementation detail, or merge the kinds.
-
-RFC-0003's configuration design is now accepted, so any future strictness setting would be a consumer of that mechanism rather than an unresolved boundary question in this RFC. Published-versus-Committed remains deferred to a separate RFC if it proves valuable.
+3. Use ADR-0016's positive taxonomy test. ADR covers system-wide ownership, architectural boundaries, canonical state, and policy or contracts multiple components must honor. EDR covers local algorithms, formats, parameters, and implementation mechanisms within established boundaries. If both apply, classify the decision as ADR.
 
 ## Alternatives Considered
 
@@ -121,10 +119,8 @@ and evaluate it in a future RFC instead of coupling it to this policy pass.
 
 ## Open Questions
 
-1. **ADR and EDR scope:** Should ADR become Any Decision Record while EDR stays narrowly limited to novel implementation detail; should ADR and EDR merge; or should today's split remain? If separate, what concrete classification test proves the distinction?
-
-2. **Published versus committed:** Defer this to a separate RFC unless the workflow review finds that the distinction is necessary to explain lifecycle state.
+Published-versus-Committed remains deferred to a separate RFC unless future workflow evidence shows that the distinction is necessary to explain lifecycle state.
 
 ## Outcome
 
-Proposed. EDR-0007 resolves the draft-state question. ADR-0015 resolves the traceability questions: accepted ADR/EDR records without incoming produces or derived-from lineage from an RFC/PDR receive an advisory warning, while standalone and retroactive records remain valid and strictness remains non-blocking by default. RFC-0003, ADR-0014, and EDR-0008 resolve the configuration boundary. The remaining substantive question is the ADR/EDR taxonomy; Published-versus-Committed remains deferred.
+Accepted. EDR-0007 resolved the draft-state question. ADR-0015 resolved traceability: accepted ADR/EDR records without incoming produces or derived-from lineage from an RFC/PDR receive an advisory warning, while standalone and retroactive records remain valid and strictness remains non-blocking by default. ADR-0016 resolved the taxonomy: ADR covers system-wide ownership, architectural boundaries, canonical state, and policy or contracts multiple components must honor; EDR covers local algorithms, formats, parameters, and implementation mechanisms within established boundaries. RFC-0003, ADR-0014, and EDR-0008 resolved the configuration boundary. Published-versus-Committed remains deferred to a separate RFC.
