@@ -80,8 +80,10 @@ impl Store {
             })
         })?;
         Ok(Graph {
-            record,
             relationships: rows.collect::<Result<Vec<_>, _>>()?,
+            evidence: self.list_evidence(id)?,
+            code_references: self.list_code_references(id)?,
+            record,
         })
     }
 

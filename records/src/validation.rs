@@ -28,6 +28,12 @@ pub enum ValidationError {
     InvalidRelationship(String),
     #[error("record ids must be different")]
     SelfRelationship,
+    #[error("unsupported evidence kind: {0}")]
+    InvalidEvidenceKind(String),
+    #[error("evidence title must not be empty")]
+    EmptyEvidenceTitle,
+    #[error("code reference path must not be empty")]
+    EmptyCodeReferencePath,
 }
 
 pub const RELATIONSHIPS: [&str; 10] = [
@@ -41,6 +47,16 @@ pub const RELATIONSHIPS: [&str; 10] = [
     "implemented-by",
     "supported-by",
     "supersedes",
+];
+
+pub const EVIDENCE_KINDS: [&str; 7] = [
+    "benchmark",
+    "experiment",
+    "source",
+    "code-reference",
+    "issue",
+    "measurement",
+    "prototype",
 ];
 
 pub fn validate_document(kind: RecordKind, document: &JsonValue) -> Result<(), ValidationError> {
@@ -117,11 +133,34 @@ pub fn validate_relationship(
     relation: &str,
     target: &RecordId,
 ) -> Result<(), ValidationError> {
+    validate_relation_kind(relation)?;
+    if source == target {
+        return Err(ValidationError::SelfRelationship);
+    }
+    Ok(())
+}
+
+pub fn validate_relation_kind(relation: &str) -> Result<(), ValidationError> {
     if !RELATIONSHIPS.contains(&relation) {
         return Err(ValidationError::InvalidRelationship(relation.into()));
     }
-    if source == target {
-        return Err(ValidationError::SelfRelationship);
+    Ok(())
+}
+
+pub fn validate_evidence(kind: &str, title: &str) -> Result<(), ValidationError> {
+    if !EVIDENCE_KINDS.contains(&kind) {
+        return Err(ValidationError::InvalidEvidenceKind(kind.into()));
+    }
+    if title.trim().is_empty() {
+        return Err(ValidationError::EmptyEvidenceTitle);
+    }
+    Ok(())
+}
+
+pub fn validate_code_reference(relation: &str, path: &str) -> Result<(), ValidationError> {
+    validate_relation_kind(relation)?;
+    if path.trim().is_empty() {
+        return Err(ValidationError::EmptyCodeReferencePath);
     }
     Ok(())
 }
@@ -151,5 +190,37 @@ mod tests {
         let document = RecordKind::Adr.default_document("title");
 
         assert!(validate_document(RecordKind::Adr, &document).is_ok());
+    }
+
+    #[test]
+    fn evidence_kind_outside_the_whitelist_is_rejected() {
+        assert!(matches!(
+            validate_evidence("vibes", "a title"),
+            Err(ValidationError::InvalidEvidenceKind(kind)) if kind == "vibes"
+        ));
+    }
+
+    #[test]
+    fn evidence_title_must_not_be_empty() {
+        assert!(matches!(
+            validate_evidence("benchmark", "  "),
+            Err(ValidationError::EmptyEvidenceTitle)
+        ));
+    }
+
+    #[test]
+    fn code_reference_relation_must_be_a_known_kind() {
+        assert!(matches!(
+            validate_code_reference("vibes", "src/lib.rs"),
+            Err(ValidationError::InvalidRelationship(relation)) if relation == "vibes"
+        ));
+    }
+
+    #[test]
+    fn code_reference_path_must_not_be_empty() {
+        assert!(matches!(
+            validate_code_reference("constrains", "  "),
+            Err(ValidationError::EmptyCodeReferencePath)
+        ));
     }
 }

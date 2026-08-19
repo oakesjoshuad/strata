@@ -1,4 +1,6 @@
+mod code_reference;
 mod connection;
+mod evidence;
 mod mutations;
 mod queries;
 mod slug;
@@ -56,6 +58,8 @@ impl From<serde_json::Error> for StoreError {
 pub struct Graph {
     pub record: Record,
     pub relationships: Vec<records::Relationship>,
+    pub evidence: Vec<records::Evidence>,
+    pub code_references: Vec<records::CodeReference>,
 }
 
 pub(crate) fn record_from_row(row: &Row<'_>) -> rusqlite::Result<Record> {

@@ -37,6 +37,12 @@ pub(crate) fn print_graph(graph: Graph, json_flag: bool) -> Result<(), CliError>
                 relation.source_id, relation.relation, relation.target_id
             );
         }
+        for evidence in graph.evidence {
+            println!("  evidence [{}] {}", evidence.kind, evidence.title);
+        }
+        for code_ref in graph.code_references {
+            println!("  {} {}", code_ref.relation, code_ref.path);
+        }
     }
     Ok(())
 }
