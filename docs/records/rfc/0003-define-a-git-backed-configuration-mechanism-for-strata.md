@@ -2,8 +2,8 @@
 id: "RFC-0003"
 title: "Define a git-backed configuration mechanism for Strata"
 record-type: rfc
-status: proposed
-revision: 3
+status: accepted
+revision: 6
 date: 2026-08-19
 slug: define-a-git-backed-configuration-mechanism-for-strata
 tags: []
@@ -85,4 +85,4 @@ The follow-on records should answer these questions explicitly:
 
 ## Outcome
 
-Proposed. All eight open questions this RFC raised are now resolved by two produced records: ADR-0014 settles precedence (CLI flag, then STRATA_<SETTING> environment variable, then config file, then hardcoded default) and partially settles crate ownership (CLI composition root). EDR-0008 settles format (JSON), location and discovery (repository-root strata.config.json, found by walking up to the nearest .git marker), first-wave scope (database path, export target, and the ADR-0013 dump-file path together, closing the dump-path coordination question as a direct consequence rather than a separate decision), malformed-versus-missing handling (malformed is an explicit error, missing falls through silently), and kernel involvement (none). cli/src/config.rs implements the resolved design. Human review should confirm this RFC is ready to move to accepted now that its questions are answered, rather than remaining proposed indefinitely.
+Accepted. All eight open questions this RFC raised are resolved by ADR-0014 and EDR-0008. ADR-0014 settles precedence (CLI flag, then STRATA_<SETTING> environment variable, then config file, then hardcoded default) and CLI composition-root ownership. EDR-0008 settles format (JSON), location and discovery (repository-root strata.config.json, found by walking up to the nearest .git marker), first-wave scope (database path, export target, and the ADR-0013 dump-file path), malformed-versus-missing handling (malformed is an explicit error, missing falls through silently), and kernel involvement (none). cli/src/config.rs implements the resolved design; RFC-0003 is accepted as the design record for that mechanism.
