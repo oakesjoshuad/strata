@@ -1,6 +1,7 @@
 mod args;
 mod document;
 mod export;
+mod help;
 mod output;
 mod parse;
 mod render;
@@ -40,6 +41,11 @@ pub(crate) fn build_version() -> &'static str {
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if help::requested(&args) {
+        help::print();
+        return;
+    }
     if let Err(error) = run() {
         eprintln!("error: {error}");
         std::process::exit(1);
