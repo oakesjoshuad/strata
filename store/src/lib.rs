@@ -1,8 +1,10 @@
 mod code_reference;
 mod connection;
+mod dump;
 mod evidence;
 mod mutations;
 mod queries;
+mod restore;
 mod slug;
 mod validate;
 

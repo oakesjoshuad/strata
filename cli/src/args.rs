@@ -73,6 +73,17 @@ pub(crate) enum Command {
         #[arg(long)]
         check: bool,
     },
+    /// Dump the full-fidelity database snapshot to docs/db-snapshot.sql
+    Dump {
+        /// Verify the committed SQL snapshot matches canonical state instead of writing it
+        #[arg(long)]
+        check: bool,
+    },
+    /// Restore a database from a native SQL dump into the --database target
+    Restore {
+        /// Path to the native SQL dump
+        path: PathBuf,
+    },
     /// Show a record's revision history
     History {
         /// Record id, e.g. ADR-0001

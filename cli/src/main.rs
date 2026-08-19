@@ -1,5 +1,6 @@
 mod args;
 mod document;
+mod dump;
 mod export;
 mod help;
 mod output;
@@ -10,7 +11,7 @@ use args::{Cli, Command};
 use clap::Parser;
 use output::{
     emit_json, output_capabilities, output_relationships, output_schema, print_code_reference,
-    print_evidence, print_graph, print_value,
+    print_dump_result, print_evidence, print_graph, print_restored, print_value,
 };
 use records::{RecordId, RecordKind, Status};
 use render::{render_record, render_template};
@@ -134,6 +135,11 @@ fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
             print!("{}", render_record(store, &parse_id(&id)?)?);
         }
         Command::Export { check } => export::run(store, check)?,
+        Command::Dump { check } => print_dump_result(dump::run(store, check)?)?,
+        Command::Restore { path } => {
+            dump::restore(store, &path)?;
+            print_restored(&path);
+        }
         Command::History { id } => {
             for revision in store.history(&parse_id(&id)?)? {
                 println!(

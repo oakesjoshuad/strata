@@ -61,6 +61,20 @@ where
         .expect("run strata")
 }
 
+fn run_in_directory<I, S>(directory: &Path, database: &Path, args: I) -> Output
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    Command::new(env!("CARGO_BIN_EXE_strata"))
+        .current_dir(directory)
+        .arg("--database")
+        .arg(database)
+        .args(args)
+        .output()
+        .expect("run strata")
+}
+
 fn run_without_database<I, S>(args: I) -> Output
 where
     I: IntoIterator<Item = S>,
@@ -156,6 +170,74 @@ fn auxiliary_commands_report_validation_errors() {
     );
     assert!(!code_reference.status.success());
     assert!(output_text(&code_reference).contains("unsupported relationship"));
+}
+
+#[test]
+fn dump_and_check_report_clean_snapshot() {
+    let fixture = Fixture::new();
+    let dumped = run_in_directory(&fixture.directory, &fixture.database, ["dump"]);
+    assert!(dumped.status.success(), "{}", output_text(&dumped));
+    assert!(fixture.directory.join("docs/db-snapshot.sql").is_file());
+
+    let checked = run_in_directory(&fixture.directory, &fixture.database, ["dump", "--check"]);
+    assert!(checked.status.success(), "{}", output_text(&checked));
+    assert!(String::from_utf8_lossy(&checked.stdout).contains("dump check clean"));
+}
+
+#[test]
+fn dump_check_reports_stale_file() {
+    let fixture = Fixture::new();
+    let dumped = run_in_directory(&fixture.directory, &fixture.database, ["dump"]);
+    assert!(dumped.status.success(), "{}", output_text(&dumped));
+    let revised = run(
+        &fixture.database,
+        [
+            "new",
+            "edr",
+            "New record",
+            "--document",
+            r#"{"schema":"edr/v1","context":"test","decision":"test","alternatives":"test","consequences":"test","evidence":"test"}"#,
+        ],
+    );
+    assert!(revised.status.success(), "{}", output_text(&revised));
+    let checked = run_in_directory(&fixture.directory, &fixture.database, ["dump", "--check"]);
+    assert!(!checked.status.success());
+    assert!(output_text(&checked).contains("different docs/db-snapshot.sql"));
+}
+
+#[test]
+fn dump_check_reports_different_file_and_missing_file() {
+    let fixture = Fixture::new();
+    let dumped = run_in_directory(&fixture.directory, &fixture.database, ["dump"]);
+    assert!(dumped.status.success(), "{}", output_text(&dumped));
+    let snapshot = fixture.directory.join("docs/db-snapshot.sql");
+    fs::write(&snapshot, "different").expect("overwrite snapshot");
+    let different = run_in_directory(&fixture.directory, &fixture.database, ["dump", "--check"]);
+    assert!(!different.status.success());
+    assert!(output_text(&different).contains("different docs/db-snapshot.sql"));
+
+    fs::remove_file(&snapshot).expect("remove snapshot");
+    let missing = run_in_directory(&fixture.directory, &fixture.database, ["dump", "--check"]);
+    assert!(!missing.status.success());
+    assert!(output_text(&missing).contains("missing docs/db-snapshot.sql"));
+}
+
+#[test]
+fn dump_then_restore_round_trips_through_the_binary() {
+    let fixture = Fixture::new();
+    let dumped = run_in_directory(&fixture.directory, &fixture.database, ["dump"]);
+    assert!(dumped.status.success(), "{}", output_text(&dumped));
+    let restored_database = fixture.directory.join("restored.db");
+    let restored = run_in_directory(
+        &fixture.directory,
+        &restored_database,
+        ["restore", "docs/db-snapshot.sql"],
+    );
+    assert!(restored.status.success(), "{}", output_text(&restored));
+    let searched = run(&restored_database, ["search", "CLI", "--json"]);
+    assert!(searched.status.success(), "{}", output_text(&searched));
+    let records: Value = serde_json::from_slice(&searched.stdout).expect("search JSON");
+    assert_eq!(records.as_array().expect("records").len(), 1);
 }
 
 #[test]

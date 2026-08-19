@@ -43,7 +43,10 @@ const HELP_GROUPS: &[(&str, &[&str])] = &[
         &["link", "evidence-add", "code-ref-add"],
     ),
     ("Find and inspect", &["show", "search", "graph", "history"]),
-    ("Publish and verify", &["render", "export", "validate"]),
+    (
+        "Publish and verify",
+        &["render", "export", "dump", "restore", "validate"],
+    ),
     (
         "Self-description (for agents and tooling)",
         &["schema", "capabilities", "relationships"],

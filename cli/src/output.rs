@@ -6,6 +6,20 @@ use serde_json::json;
 use std::fmt::Debug;
 use store::Graph;
 
+pub(crate) fn print_dump_result(result: crate::dump::DumpResult) -> Result<(), CliError> {
+    match result {
+        crate::dump::DumpResult::Checked => println!("dump check clean"),
+        crate::dump::DumpResult::Written(bytes) => {
+            println!("dumped {} bytes to {}", bytes, crate::dump::DUMP_PATH)
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn print_restored(path: &std::path::Path) {
+    println!("restored {}", path.display());
+}
+
 pub(crate) fn emit_json<T: Serialize>(value: T, json_flag: bool) -> Result<(), CliError> {
     if json_flag {
         println!("{}", serde_json::to_string_pretty(&value)?);
@@ -82,7 +96,7 @@ pub(crate) fn output_schema(kind: RecordKind, json_flag: bool) -> Result<(), Cli
 
 pub(crate) fn output_capabilities(json_flag: bool) -> Result<(), CliError> {
     let kinds = RecordKind::ALL.map(|kind| json!({"kind": kind, "purpose": kind.purpose()}));
-    let value = json!({"version": build_version(), "kinds": kinds, "commands": ["init", "new", "show", "search", "graph", "render", "export", "template", "history", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"]});
+    let value = json!({"version": build_version(), "kinds": kinds, "commands": ["init", "new", "show", "search", "graph", "render", "export", "dump", "restore", "template", "history", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"]});
     emit_json(value, json_flag)
 }
 
