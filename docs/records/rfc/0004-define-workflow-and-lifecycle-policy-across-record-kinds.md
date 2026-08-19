@@ -3,12 +3,13 @@ id: "RFC-0004"
 title: "Define workflow and lifecycle policy across record kinds"
 record-type: rfc
 status: proposed
-revision: 7
+revision: 8
 date: 2026-08-19
 slug: define-workflow-and-lifecycle-policy-across-record-kinds
 tags: []
 relationships:
   produces:
+    - "ADR-0015"
     - "EDR-0007"
   relates-to:
     - "PDR-0001"
@@ -72,11 +73,9 @@ Treat workflow policy as a set of explicit, inspectable conventions rather than 
 
 1. Use EDR-0007's Draft status consistently across all four kinds. That decision is complete: Draft is discoverable, searchable, validated, and exported exactly like other statuses, and ADR/EDR must pass through Proposed before acceptance.
 
-2. Add a validation signal for decision records whose context suggests an upstream RFC/PDR but whose graph has no qualifying lineage edge. The initial policy should be a WARN, following the precedent in specification section 29, not a status-transition gate. The check should be explicit about which relations qualify; relates-to should not silently make the check trivial.
+2. Use ADR-0015's advisory traceability policy. Accepted ADR/EDR records without incoming produces or derived-from lineage from an RFC/PDR receive a warning; the warning does not block lifecycle changes, and standalone or retroactive records remain valid.
 
-3. Keep the graph permissive and retroactive-friendly. An upstream warning is a prompt to explain or link the record, not proof that the record is invalid.
-
-4. Re-examine the ADR/EDR boundary as a separate follow-on decision. The live choices are to retain the split with a concrete classification test, broaden ADR to Any Decision Record while retaining EDR for genuinely novel implementation detail, or merge the kinds.
+3. Re-examine the ADR/EDR boundary as a separate follow-on decision. The live choices are to retain the split with a concrete classification test, broaden ADR to Any Decision Record while retaining EDR for genuinely novel implementation detail, or merge the kinds.
 
 RFC-0003's configuration design is now accepted, so any future strictness setting would be a consumer of that mechanism rather than an unresolved boundary question in this RFC. Published-versus-Committed remains deferred to a separate RFC if it proves valuable.
 
@@ -121,13 +120,10 @@ and evaluate it in a future RFC instead of coupling it to this policy pass.
 
 ## Open Questions
 
-1. **Qualifying lineage:** Which relations satisfy an upstream RFC/PDR check: only produces and derived-from, or also explored-by, constrains, or relates-to? If relates-to counts, how is the check prevented from becoming trivial?
-2. **Traceability signal:** Which records should receive the warning: only accepted decisions, all proposed decisions, or decisions whose content or relationships indicate an expected upstream proposal? What should the warning say, and where should it appear?
-3. **Strictness:** Should traceability remain a soft warning by default, with an opt-in blocking mode configurable through the now-accepted RFC-0003 mechanism, or should blocking remain out of scope until operational evidence exists?
-4. **ADR and EDR scope:** Should ADR become Any Decision Record while EDR stays narrowly limited to novel implementation detail; should ADR and EDR merge; or should today's split remain? If separate, what concrete classification test proves the distinction?
-5. **Retroactive records:** Does WARN-not-block adequately cover retroactive documentation such as RFC-0001 and EDR-0006, or is an explicit retroactive annotation needed?
-6. **Published versus committed:** Defer this to a separate RFC unless the workflow review finds that the distinction is necessary to explain lifecycle state.
+1. **ADR and EDR scope:** Should ADR become Any Decision Record while EDR stays narrowly limited to novel implementation detail; should ADR and EDR merge; or should today's split remain? If separate, what concrete classification test proves the distinction?
+
+2. **Published versus committed:** Defer this to a separate RFC unless the workflow review finds that the distinction is necessary to explain lifecycle state.
 
 ## Outcome
 
-Proposed. EDR-0007 resolves the draft-state question by giving ADR and EDR the same Draft phase as RFC and PDR, with no status-based exclusion and a required Draft-to-Proposed transition. RFC-0003's configuration design is also complete: ADR-0014 and EDR-0008 are accepted, so strictness configuration is now a downstream consumer question rather than an unresolved RFC-0004 boundary. The remaining work is to define an advisory traceability signal, its qualifying relationships and scope, the treatment of retroactive records, and the ADR/EDR taxonomy. Published-versus-Committed remains deferred.
+Proposed. EDR-0007 resolves the draft-state question. ADR-0015 resolves the traceability questions: accepted ADR/EDR records without incoming produces or derived-from lineage from an RFC/PDR receive an advisory warning, while standalone and retroactive records remain valid and strictness remains non-blocking by default. RFC-0003, ADR-0014, and EDR-0008 resolve the configuration boundary. The remaining substantive question is the ADR/EDR taxonomy; Published-versus-Committed remains deferred.

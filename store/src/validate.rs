@@ -55,6 +55,17 @@ impl Store {
         })? {
             issues.push(row?);
         }
+        let mut lineage = self.conn.prepare(
+            "SELECT t.id FROM engineering_record t WHERE t.status = 'accepted' AND t.kind IN ('ADR', 'EDR') AND NOT EXISTS (SELECT 1 FROM record_relation rr JOIN engineering_record s ON s.id = rr.source_id WHERE rr.target_id = t.id AND rr.relation IN ('produces', 'derived-from') AND s.kind IN ('RFC', 'PDR')) ORDER BY t.id",
+        )?;
+        for row in lineage.query_map([], |r| {
+            Ok(format!(
+                "WARN {}: accepted decision has no qualifying lineage from an RFC or PDR",
+                r.get::<_, String>(0)?
+            ))
+        })? {
+            issues.push(row?);
+        }
         Ok(issues)
     }
 }
@@ -94,5 +105,28 @@ mod tests {
         assert!(issues
             .iter()
             .any(|issue| issue.contains("remains accepted")));
+    }
+
+    #[test]
+    fn accepted_decision_without_lineage_is_reported_as_warning() {
+        let mut store = Store::open_memory().expect("store");
+        let decision = store
+            .create(
+                RecordKind::Adr,
+                "standalone",
+                RecordKind::Adr.default_document("standalone"),
+            )
+            .expect("create decision");
+        store
+            .set_status(&decision.id, Status::Proposed)
+            .expect("propose decision");
+        store
+            .set_status(&decision.id, Status::Accepted)
+            .expect("accept decision");
+
+        let issues = store.validate().expect("validate");
+        assert!(issues.iter().any(|issue| {
+            issue == "WARN ADR-0001: accepted decision has no qualifying lineage from an RFC or PDR"
+        }));
     }
 }

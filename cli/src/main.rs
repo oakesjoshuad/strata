@@ -253,13 +253,21 @@ fn execute(
         }
         Command::Validate { json: json_flag } => {
             let issues = store.validate()?;
+            let has_errors = issues.iter().any(|issue| !issue.starts_with("WARN "));
             if json_flag {
-                emit_json(json!({"valid": issues.is_empty(), "issues": issues}), true)?;
+                emit_json(json!({"valid": !has_errors, "issues": issues}), true)?;
             } else if issues.is_empty() {
                 println!("valid");
             } else {
                 for issue in issues {
-                    println!("ERROR {issue}");
+                    if issue.starts_with("WARN ") {
+                        println!("{issue}");
+                    } else {
+                        println!("ERROR {issue}");
+                    }
+                }
+                if !has_errors {
+                    return Ok(());
                 }
                 return Err(CliError::Message("database validation failed".into()));
             }
