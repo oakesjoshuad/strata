@@ -8,6 +8,8 @@ date: 2026-08-19
 slug: define-workflow-and-lifecycle-policy-across-record-kinds
 tags: []
 relationships:
+  produces:
+    - "EDR-0007"
   relates-to:
     - "PDR-0001"
     - "RFC-0001"
