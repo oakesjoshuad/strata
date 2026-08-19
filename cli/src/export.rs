@@ -15,8 +15,7 @@ enum Difference {
     Different(PathBuf),
 }
 
-pub(crate) fn run(store: &Store, check: bool) -> Result<(), CliError> {
-    let root = Path::new("docs/records");
+pub(crate) fn run(store: &Store, check: bool, root: &Path) -> Result<(), CliError> {
     let expected = rendered_records(store, root)?;
     let differences = differences(&expected, root)?;
 

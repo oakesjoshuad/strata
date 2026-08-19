@@ -1,4 +1,4 @@
-use crate::{build_version, CliError};
+use crate::{build_version, config, CliError};
 use records::RecordKind;
 use records::{CodeReference, Evidence};
 use serde::Serialize;
@@ -6,11 +6,14 @@ use serde_json::json;
 use std::fmt::Debug;
 use store::Graph;
 
-pub(crate) fn print_dump_result(result: crate::dump::DumpResult) -> Result<(), CliError> {
+pub(crate) fn print_dump_result(
+    result: crate::dump::DumpResult,
+    path: &std::path::Path,
+) -> Result<(), CliError> {
     match result {
         crate::dump::DumpResult::Checked => println!("dump check clean"),
         crate::dump::DumpResult::Written(bytes) => {
-            println!("dumped {} bytes to {}", bytes, crate::dump::DUMP_PATH)
+            println!("dumped {} bytes to {}", bytes, path.display())
         }
     }
     Ok(())
@@ -94,9 +97,17 @@ pub(crate) fn output_schema(kind: RecordKind, json_flag: bool) -> Result<(), Cli
     emit_json(value, json_flag)
 }
 
-pub(crate) fn output_capabilities(json_flag: bool) -> Result<(), CliError> {
+pub(crate) fn output_capabilities(
+    json_flag: bool,
+    resolved: &config::ResolvedConfig,
+) -> Result<(), CliError> {
     let kinds = RecordKind::ALL.map(|kind| json!({"kind": kind, "purpose": kind.purpose()}));
-    let value = json!({"version": build_version(), "kinds": kinds, "commands": ["init", "new", "show", "search", "graph", "render", "export", "dump", "restore", "template", "history", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"]});
+    let configuration = json!({
+        "database": {"value": resolved.database.value, "source": resolved.database.source.as_str()},
+        "export_target": {"value": resolved.export_target.value, "source": resolved.export_target.source.as_str()},
+        "dump_target": {"value": resolved.dump_target.value, "source": resolved.dump_target.source.as_str()},
+    });
+    let value = json!({"version": build_version(), "kinds": kinds, "commands": ["init", "new", "show", "search", "graph", "render", "export", "dump", "restore", "template", "history", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "configuration": configuration});
     emit_json(value, json_flag)
 }
 

@@ -3,8 +3,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use store::Store;
 
-pub(crate) const DUMP_PATH: &str = "docs/db-snapshot.sql";
-
 #[derive(Debug, Eq, PartialEq)]
 enum Difference {
     Missing(PathBuf),
@@ -16,8 +14,7 @@ pub(crate) enum DumpResult {
     Written(usize),
 }
 
-pub(crate) fn run(store: &Store, check: bool) -> Result<DumpResult, CliError> {
-    let path = Path::new(DUMP_PATH);
+pub(crate) fn run(store: &Store, check: bool, path: &Path) -> Result<DumpResult, CliError> {
     let expected = store.dump()?;
     let difference = difference(&expected, path)?;
     if check {
@@ -97,7 +94,7 @@ mod tests {
     #[test]
     fn check_reports_missing_file() {
         let fixture = fixture();
-        let path = fixture.directory.join(DUMP_PATH);
+        let path = fixture.directory.join("docs/db-snapshot.sql");
         let difference = difference("expected", &path).expect("check");
         assert!(matches!(difference, Some(Difference::Missing(found)) if found == path));
     }

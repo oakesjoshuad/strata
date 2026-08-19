@@ -1,4 +1,5 @@
 mod args;
+mod config;
 mod document;
 mod dump;
 mod export;
@@ -18,12 +19,9 @@ use render::{render_record, render_template};
 use serde_json::json;
 use std::fs;
 use std::io::{self, IsTerminal};
-use std::path::PathBuf;
 use std::str::FromStr;
 use store::{Store, StoreError};
 use thiserror::Error;
-
-const DB_PATH: &str = ".strata/strata.db";
 
 #[derive(Debug, Error)]
 pub(crate) enum CliError {
@@ -55,7 +53,12 @@ fn main() {
 
 fn run() -> Result<(), CliError> {
     let cli = Cli::parse();
-    let path = cli.database.unwrap_or_else(|| PathBuf::from(DB_PATH));
+    let config = config::resolve(
+        cli.database.as_deref(),
+        cli.command.export_target(),
+        cli.command.dump_target(),
+    )?;
+    let path = config.database.value.clone();
     match cli.command {
         Command::Init => {
             if let Some(parent) = path.parent() {
@@ -69,17 +72,21 @@ fn run() -> Result<(), CliError> {
             json: json_flag,
         } => output_schema(kind.into(), json_flag)?,
         Command::Template { kind } => print!("{}", render_template(kind.into())?),
-        Command::Capabilities { json: json_flag } => output_capabilities(json_flag)?,
+        Command::Capabilities { json: json_flag } => output_capabilities(json_flag, &config)?,
         Command::Relationships { json: json_flag } => output_relationships(json_flag)?,
         command => {
             let mut store = Store::open(&path)?;
-            execute(command, &mut store)?;
+            execute(command, &mut store, &config)?;
         }
     }
     Ok(())
 }
 
-fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
+fn execute(
+    command: Command,
+    store: &mut Store,
+    config: &config::ResolvedConfig,
+) -> Result<(), CliError> {
     match command {
         Command::New {
             kind,
@@ -134,8 +141,11 @@ fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
         Command::Render { id } => {
             print!("{}", render_record(store, &parse_id(&id)?)?);
         }
-        Command::Export { check } => export::run(store, check)?,
-        Command::Dump { check } => print_dump_result(dump::run(store, check)?)?,
+        Command::Export { check, .. } => export::run(store, check, &config.export_target.value)?,
+        Command::Dump { check, .. } => print_dump_result(
+            dump::run(store, check, &config.dump_target.value)?,
+            &config.dump_target.value,
+        )?,
         Command::Restore { path } => {
             dump::restore(store, &path)?;
             print_restored(&path);
@@ -265,4 +275,20 @@ fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
 
 fn parse_id(value: &str) -> Result<RecordId, CliError> {
     RecordId::from_str(value).map_err(CliError::Message)
+}
+
+impl Command {
+    fn export_target(&self) -> Option<&std::path::Path> {
+        match self {
+            Self::Export { target, .. } => target.as_deref(),
+            _ => None,
+        }
+    }
+
+    fn dump_target(&self) -> Option<&std::path::Path> {
+        match self {
+            Self::Dump { target, .. } => target.as_deref(),
+            _ => None,
+        }
+    }
 }

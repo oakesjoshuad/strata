@@ -7,7 +7,7 @@ use std::path::PathBuf;
 pub(crate) struct Cli {
     #[command(subcommand)]
     pub(crate) command: Command,
-    /// Path to the SQLite database (defaults to .strata/strata.db)
+    /// Path to the SQLite database (CLI, STRATA_DATABASE, config file, or default)
     #[arg(long, global = true, value_name = "PATH")]
     pub(crate) database: Option<PathBuf>,
 }
@@ -72,12 +72,18 @@ pub(crate) enum Command {
         /// Verify committed Markdown matches canonical state instead of writing it
         #[arg(long)]
         check: bool,
+        /// Target directory for generated Markdown
+        #[arg(long, value_name = "PATH")]
+        target: Option<PathBuf>,
     },
-    /// Dump the full-fidelity database snapshot to docs/db-snapshot.sql
+    /// Dump the full-fidelity database snapshot to the configured target
     Dump {
         /// Verify the committed SQL snapshot matches canonical state instead of writing it
         #[arg(long)]
         check: bool,
+        /// Target path for the native SQL snapshot
+        #[arg(long, value_name = "PATH")]
+        target: Option<PathBuf>,
     },
     /// Restore a database from a native SQL dump into the --database target
     Restore {

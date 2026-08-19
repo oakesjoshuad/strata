@@ -93,7 +93,7 @@ pub(crate) fn print() {
 
     println!("{}:", heading("Options"));
     println!(
-        "      {}  Path to the SQLite database (defaults to .strata/strata.db)",
+        "      {}  Path to the SQLite database (CLI, STRATA_DATABASE, config file, or default)",
         strong("--database <PATH>")
     );
     println!(
