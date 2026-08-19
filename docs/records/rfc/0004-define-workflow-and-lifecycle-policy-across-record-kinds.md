@@ -3,7 +3,7 @@ id: "RFC-0004"
 title: "Define workflow and lifecycle policy across record kinds"
 record-type: rfc
 status: proposed
-revision: 3
+revision: 7
 date: 2026-08-19
 slug: define-workflow-and-lifecycle-policy-across-record-kinds
 tags: []
@@ -20,60 +20,21 @@ relationships:
 
 ## Motivation
 
-Issue #14 asks for a workflow and lifecycle-policy review rather than another
-implementation decision. Strata has four intentionally different record kinds,
-but two questions about their operating policy remain underspecified. RFC and
-PDR begin in `draft`, while ADR and EDR begin in `proposed`; and the relationship
-graph can express cross-kind lineage without any validation signal when a
-decision has no visible upstream rationale. At the same time, Strata's original
-ADR/EDR split deserves a second look now that newer MADR evidence points toward
-"Any Decision Record" and Oxide provides a real example of a flattened record
-kind.
+Issue #14 asks for a workflow and lifecycle-policy review rather than another implementation decision. Strata has four intentionally different record kinds, and the remaining policy questions concern cross-kind lineage signals, retroactive records, and the ADR/EDR boundary. EDR-0007 has already resolved the draft-state asymmetry for ADR and EDR by adding a consistent Draft phase without imposing traceability gates. RFC-0003, ADR-0014, and EDR-0008 have also settled the configuration boundary that this RFC previously treated as open.
 
-This RFC is a workflow proposal, not a transcription of the current code or of
-the two research lineages. NASA/DoD's PDR/CDR gate model is useful evidence for
-named entrance and exit criteria, but importing its hard gates into a single-user
-software knowledge base would contradict the deliberately flexible graph in
-`docs/specification.md:290-321` and the software record practices that permit
-retroactive documentation and lightweight decisions.
+This RFC is a workflow proposal, not a transcription of the current code or of the two research lineages. NASA/DoD's PDR/CDR gate model is useful evidence for named entrance and exit criteria, but importing its hard gates into a single-user software knowledge base would contradict the flexible graph in docs/specification.md:290-321 and the software record practices that permit retroactive documentation and lightweight decisions.
 
 ## Problem
 
-`records/src/kind.rs:55-59` gives RFC and PDR an initial `draft` status but gives
-ADR and EDR `proposed`. Their status lists at `records/src/kind.rs:62-84` also
-omit `draft`. The specification describes the same asymmetry in sections 5.3
-and 5.4 (`docs/specification.md:232-269`) without defining what a not-yet-ready
-ADR or EDR should mean operationally.
+The graph has the vocabulary to express lineage: the specification's examples include RFC explored-by PDR and PDR produces ADR/EDR (docs/specification.md:290-321). It does not currently check whether an accepted decision has an appropriate upstream relationship. This leaves a useful distinction unobserved: a standalone decision, a deliberately retroactive record, and a decision expected to result from an RFC or PDR all look the same.
 
-The graph has the vocabulary to express lineage: the specification's examples
-include RFC explored-by PDR and PDR produces ADR/EDR
-(`docs/specification.md:290-321`). It does not, however, currently check whether
-an approved or accepted decision has such a relationship. This leaves a useful
-distinction unobserved: a small standalone decision, a deliberately retroactive
-record, and a decision that was expected to result from an RFC or PDR all look
-the same. The existing validation precedent is deliberately softer: section 29
-shows `WARN PDR-0017 approved but has no resulting decision`
-(`docs/specification.md:1013-1040`).
-
-Finally, the current scope boundary is not obviously the best one. ADR means
-architecturally significant choice in `records/src/kind.rs:37-43` and
-`docs/specification.md:232-249`; EDR means implementation-level engineering
-choice in `records/src/kind.rs:42` and `docs/specification.md:251-269`. That
-boundary can make readers search a document bible for relevance, while MADR's
-v3 change to "Any Decision Record" and Oxide's flattened RFD show credible
-alternatives. EDR is also not an established industry term outside Strata, so
-its continued existence needs a sharper positive definition than "not ADR."
+The lifecycle asymmetry is no longer open. EDR-0007 added Draft to ADR and EDR, matching RFC and PDR, while deliberately leaving search, validation, and export status-neutral. RFC-0003's configuration boundary is also settled by ADR-0014 and EDR-0008; any future traceability strictness setting would consume that mechanism rather than redefine it here.
 
 ## Scope
 
-This RFC proposes policy for the meaning and possible use of `draft` across all
-four kinds, a checkable but initially advisory form of cross-kind traceability,
-and a follow-on re-evaluation of ADR and EDR scope. It covers the interaction
-between those policies and retroactive records such as RFC-0001 and EDR-0006.
+This RFC proposes policy for a checkable but initially advisory form of cross-kind traceability, the interaction between that signal and retroactive records, and a follow-on re-evaluation of ADR and EDR scope.
 
-It also records the boundary with RFC-0003 (issue #13): whether traceability
-strictness can later be configured is a consumer question for that configuration
-design, not a decision about RFC-0003's format, location, precedence, or schema.
+EDR-0007 resolves the draft-status question, and RFC-0003, ADR-0014, and EDR-0008 resolve the configuration boundary. Published-versus-Committed remains outside this RFC and should receive its own proposal if it proves valuable.
 
 ## Non-Goals
 
@@ -107,46 +68,17 @@ overflow category.
 
 ## Proposal
 
-Treat workflow policy as a set of explicit, inspectable conventions rather than
-as a mandatory pipeline:
+Treat workflow policy as a set of explicit, inspectable conventions rather than as a mandatory pipeline:
 
-1. Revisit whether ADR and EDR should admit a `draft` state before `proposed`,
-   with the operational meaning of that state specified separately. The useful
-   question is not merely whether the enum should gain a variant; it is whether
-   draft content is discoverable, searchable, and included in lifecycle health
-   checks. This policy is independent of the traceability decision.
-2. Add a validation signal for decision records whose context suggests an
-   upstream RFC/PDR but whose graph has no qualifying lineage edge. The initial
-   policy should be a `WARN`, following the precedent in specification section
-   29, not a status-transition gate. The check should be explicit about which
-   relations qualify; `relates-to` should not silently make the check trivial
-   merely because it is easy to add.
-3. Keep the graph permissive and retroactive-friendly. An upstream warning is a
-   prompt to explain or link the record, not proof that the record is invalid.
-   A later policy can distinguish expected lineage from standalone or
-   after-the-fact decisions without pretending that chronology is always
-   available.
-4. Re-examine the ADR/EDR boundary as a separate follow-on decision. The
-   recommended direction for that review is to broaden ADR to Any Decision
-   Record while retaining EDR for genuinely novel, specific implementation
-   details, with a concrete classification test still required. The competing
-   option of fully merging ADR and EDR is the central alternative, not a
-   straw-man: MADR completed a similar broadening, and Oxide's flattened RFD
-   demonstrates a different but credible workflow. Leaving today's split
-   unchanged remains a third live option if a test shows that the separation
-   materially improves retrieval.
+1. Use EDR-0007's Draft status consistently across all four kinds. That decision is complete: Draft is discoverable, searchable, validated, and exported exactly like other statuses, and ADR/EDR must pass through Proposed before acceptance.
 
-This proposal borrows entrance/exit-criteria thinking as a named warning and
-explanation aid, not as NASA's hard gate. It also treats retroactive writing as
-normal documentation work: RFC-0001 and EDR-0006 are evidence that a record may
-be valuable after the decision. The follow-on design should determine whether
-the warning needs an explicit retroactive annotation or whether advisory
-validation already covers it.
+2. Add a validation signal for decision records whose context suggests an upstream RFC/PDR but whose graph has no qualifying lineage edge. The initial policy should be a WARN, following the precedent in specification section 29, not a status-transition gate. The check should be explicit about which relations qualify; relates-to should not silently make the check trivial.
 
-If ADR expands from Architecture to Any, the eventual decision record must
-revisit the ADR purpose string at `records/src/kind.rs:37-43`, the ADR entry in
-`docs/specification.md:232-249`, and the `KindArg::Adr` documentation in
-`cli/src/args.rs:208-209`. This RFC flags those consequences; it does not edit them.
+3. Keep the graph permissive and retroactive-friendly. An upstream warning is a prompt to explain or link the record, not proof that the record is invalid.
+
+4. Re-examine the ADR/EDR boundary as a separate follow-on decision. The live choices are to retain the split with a concrete classification test, broaden ADR to Any Decision Record while retaining EDR for genuinely novel implementation detail, or merge the kinds.
+
+RFC-0003's configuration design is now accepted, so any future strictness setting would be a consumer of that mechanism rather than an unresolved boundary question in this RFC. Published-versus-Committed remains deferred to a separate RFC if it proves valuable.
 
 ## Alternatives Considered
 
@@ -189,36 +121,13 @@ and evaluate it in a future RFC instead of coupling it to this policy pass.
 
 ## Open Questions
 
-1. **Draft state:** Should ADR and EDR gain `draft`? What does draft mean
-   operationally: excluded from traceability validation, excluded from search
-   by default, excluded from lifecycle warnings, or purely advisory metadata?
-2. **Qualifying lineage:** Which relations satisfy an upstream RFC/PDR check:
-   only `produces` and `derived-from`, or also `explored-by`, `constrains`, or
-   `relates-to`? If `relates-to` counts, how is the check prevented from being
-   trivially satisfied?
-3. **Strictness and RFC-0003:** Should traceability remain a soft warning by
-   default with opt-in strict/blocking behavior through RFC-0003's eventual
-   mechanism, or is that coupling premature while both RFCs remain unresolved?
-   This question does not decide RFC-0003's format, location, precedence, or
-   configuration schema.
-4. **ADR and EDR scope:** Should ADR become Any Decision Record while EDR stays
-   narrowly limited to novel, specific implementation detail; should ADR and
-   EDR merge into one kind; or should today's split remain? If separate, what
-   concrete classification test proves that a record belongs in EDR rather than
-   ADR, rather than merely not fitting an underspecified ADR label?
-5. **Retroactive records:** Do RFC-0001 and EDR-0006 require an explicit
-   traceability or draft-state carve-out, or does WARN-not-block already cover
-   retroactive documentation without a special case?
-6. **Published versus committed:** Does Oxide's distinction belong in this
-   workflow policy, or should it be a distinct future RFC? The current scope
-   recommendation is to defer it.
+1. **Qualifying lineage:** Which relations satisfy an upstream RFC/PDR check: only produces and derived-from, or also explored-by, constrains, or relates-to? If relates-to counts, how is the check prevented from becoming trivial?
+2. **Traceability signal:** Which records should receive the warning: only accepted decisions, all proposed decisions, or decisions whose content or relationships indicate an expected upstream proposal? What should the warning say, and where should it appear?
+3. **Strictness:** Should traceability remain a soft warning by default, with an opt-in blocking mode configurable through the now-accepted RFC-0003 mechanism, or should blocking remain out of scope until operational evidence exists?
+4. **ADR and EDR scope:** Should ADR become Any Decision Record while EDR stays narrowly limited to novel implementation detail; should ADR and EDR merge; or should today's split remain? If separate, what concrete classification test proves the distinction?
+5. **Retroactive records:** Does WARN-not-block adequately cover retroactive documentation such as RFC-0001 and EDR-0006, or is an explicit retroactive annotation needed?
+6. **Published versus committed:** Defer this to a separate RFC unless the workflow review finds that the distinction is necessary to explain lifecycle state.
 
 ## Outcome
 
-Proposed. This RFC recommends a soft, explicit traceability signal and a serious
-review of draft semantics and ADR/EDR scope, while preserving the flexible graph
-and retroactive documentation. It intentionally resolves none of the six
-questions above. Follow-on records should settle the status behavior, qualifying
-relations, strictness/configuration boundary, ADR/EDR classification or merge,
-retroactive treatment, and any Published-versus-Committed lifecycle before
-implementation changes are made.
+Proposed. EDR-0007 resolves the draft-state question by giving ADR and EDR the same Draft phase as RFC and PDR, with no status-based exclusion and a required Draft-to-Proposed transition. RFC-0003's configuration design is also complete: ADR-0014 and EDR-0008 are accepted, so strictness configuration is now a downstream consumer question rather than an unresolved RFC-0004 boundary. The remaining work is to define an advisory traceability signal, its qualifying relationships and scope, the treatment of retroactive records, and the ADR/EDR taxonomy. Published-versus-Committed remains deferred.
