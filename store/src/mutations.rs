@@ -175,6 +175,37 @@ mod tests {
     }
 
     #[test]
+    fn revise_rolls_back_completely_when_a_later_statement_fails() {
+        let mut store = Store::open_memory().expect("store");
+        let original = RecordKind::Adr.default_document("original");
+        let record = store
+            .create(RecordKind::Adr, "Original title", original.clone())
+            .expect("create");
+
+        // Seed a conflicting revision-2 row so revise()'s insert_revision call
+        // fails after its UPDATE to engineering_record has already run, without
+        // needing any fault-injection seam.
+        store
+            .conn
+            .execute(
+                "INSERT INTO record_revision (record_id, revision, document, changed_at, change_summary) VALUES (:id, 2, '{}', 'seed', 'seed')",
+                rusqlite::named_params! { ":id": &record.id },
+            )
+            .expect("seed conflicting revision row");
+
+        let result = store.revise(
+            &record.id,
+            RecordKind::Adr.default_document("revised"),
+            None,
+        );
+
+        assert!(result.is_err());
+        let after = store.get(&record.id).expect("get");
+        assert_eq!(after.revision, 1);
+        assert_eq!(after.document, original);
+    }
+
+    #[test]
     fn retitle_rejects_empty_title() {
         let mut store = Store::open_memory().expect("store");
         let record = store
