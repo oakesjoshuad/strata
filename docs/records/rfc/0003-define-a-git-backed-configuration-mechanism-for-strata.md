@@ -3,13 +3,14 @@ id: "RFC-0003"
 title: "Define a git-backed configuration mechanism for Strata"
 record-type: rfc
 status: proposed
-revision: 2
+revision: 3
 date: 2026-08-19
 slug: define-a-git-backed-configuration-mechanism-for-strata
 tags: []
 relationships:
   produces:
     - "ADR-0014"
+    - "EDR-0008"
   relates-to:
     - "ADR-0001"
     - "ADR-0013"
@@ -84,4 +85,4 @@ The follow-on records should answer these questions explicitly:
 
 ## Outcome
 
-Proposed. This RFC asks the project to pursue a git-backed configuration design for the database path and Markdown export target, while coordinating the future ADR-0013 dump-file path and explicitly deferring broader preferences such as default output mode and search limit unless review promotes them into scope. It intentionally resolves none of the format, location, precedence, malformed-file, crate-ownership, or kernel questions above; those are independent design choices for follow-on ADRs or EDRs. Human review should confirm the scope and split before implementation begins.
+Proposed. All eight open questions this RFC raised are now resolved by two produced records: ADR-0014 settles precedence (CLI flag, then STRATA_<SETTING> environment variable, then config file, then hardcoded default) and partially settles crate ownership (CLI composition root). EDR-0008 settles format (JSON), location and discovery (repository-root strata.config.json, found by walking up to the nearest .git marker), first-wave scope (database path, export target, and the ADR-0013 dump-file path together, closing the dump-path coordination question as a direct consequence rather than a separate decision), malformed-versus-missing handling (malformed is an explicit error, missing falls through silently), and kernel involvement (none). cli/src/config.rs implements the resolved design. Human review should confirm this RFC is ready to move to accepted now that its questions are answered, rather than remaining proposed indefinitely.
