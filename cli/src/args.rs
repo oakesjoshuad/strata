@@ -58,6 +58,32 @@ pub(crate) enum Command {
         relation: String,
         target: String,
     },
+    EvidenceAdd {
+        id: String,
+        kind: String,
+        title: String,
+        #[arg(long)]
+        uri: Option<String>,
+        #[arg(long)]
+        content: Option<String>,
+        #[arg(long)]
+        metadata: Option<String>,
+        #[arg(long)]
+        json: bool,
+    },
+    CodeRefAdd {
+        id: String,
+        relation: String,
+        path: String,
+        #[arg(long)]
+        symbol: Option<String>,
+        #[arg(long)]
+        line_start: Option<u32>,
+        #[arg(long)]
+        line_end: Option<u32>,
+        #[arg(long)]
+        json: bool,
+    },
     Status {
         id: String,
         new_status: String,

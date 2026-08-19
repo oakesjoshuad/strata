@@ -1,0 +1,148 @@
+use serde_json::Value;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Output};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+struct Fixture {
+    directory: PathBuf,
+    database: PathBuf,
+    record_id: String,
+}
+
+impl Fixture {
+    fn new() -> Self {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!("strata-cli-test-{suffix}"));
+        fs::create_dir_all(&directory).expect("temporary directory");
+        let database = directory.join("strata.db");
+        let output = run(
+            &database,
+            [
+                "new",
+                "adr",
+                "CLI test",
+                "--document",
+                r#"{"schema":"adr/v1","context":"test","decision":"test","alternatives":"test","consequences":"test","evidence":"test"}"#,
+                "--json",
+            ],
+        );
+        assert!(output.status.success(), "{}", output_text(&output));
+        let record: Value = serde_json::from_slice(&output.stdout).expect("record JSON");
+        let number = record["id"]["number"].as_u64().expect("record number");
+        let record_id = format!("ADR-{number:04}");
+        Self {
+            directory,
+            database,
+            record_id,
+        }
+    }
+}
+
+impl Drop for Fixture {
+    fn drop(&mut self) {
+        fs::remove_dir_all(&self.directory).expect("temporary directory cleanup");
+    }
+}
+
+fn run<I, S>(database: &Path, args: I) -> Output
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    Command::new(env!("CARGO_BIN_EXE_strata"))
+        .arg("--database")
+        .arg(database)
+        .args(args)
+        .output()
+        .expect("run strata")
+}
+
+fn output_text(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stderr).into_owned()
+}
+
+#[test]
+fn evidence_add_emits_json_and_graph_includes_it() {
+    let fixture = Fixture::new();
+    let output = run(
+        &fixture.database,
+        [
+            "evidence-add",
+            &fixture.record_id,
+            "benchmark",
+            "Latency benchmark",
+            "--uri",
+            "https://example.com/benchmark",
+            "--metadata",
+            r#"{"runner":"criterion"}"#,
+            "--json",
+        ],
+    );
+    assert!(output.status.success(), "{}", output_text(&output));
+    let evidence: Value = serde_json::from_slice(&output.stdout).expect("evidence JSON");
+    assert_eq!(evidence["id"], format!("{}-EV-001", fixture.record_id));
+    assert_eq!(evidence["kind"], "benchmark");
+
+    let graph = run(&fixture.database, ["graph", &fixture.record_id, "--json"]);
+    assert!(graph.status.success(), "{}", output_text(&graph));
+    let graph: Value = serde_json::from_slice(&graph.stdout).expect("graph JSON");
+    assert_eq!(graph["evidence"][0]["title"], "Latency benchmark");
+}
+
+#[test]
+fn code_ref_add_emits_json() {
+    let fixture = Fixture::new();
+    let output = run(
+        &fixture.database,
+        [
+            "code-ref-add",
+            &fixture.record_id,
+            "constrains",
+            "store/src/lib.rs",
+            "--symbol",
+            "Store::graph",
+            "--line-start",
+            "42",
+            "--line-end",
+            "60",
+            "--json",
+        ],
+    );
+    assert!(output.status.success(), "{}", output_text(&output));
+    let reference: Value = serde_json::from_slice(&output.stdout).expect("code reference JSON");
+    assert_eq!(reference["relation"], "constrains");
+    assert_eq!(reference["line_start"], 42);
+    assert_eq!(reference["line_end"], 60);
+}
+
+#[test]
+fn auxiliary_commands_report_validation_errors() {
+    let fixture = Fixture::new();
+    let evidence = run(
+        &fixture.database,
+        [
+            "evidence-add",
+            &fixture.record_id,
+            "not-valid",
+            "Bad evidence",
+        ],
+    );
+    assert!(!evidence.status.success());
+    assert!(output_text(&evidence).contains("unsupported evidence kind"));
+
+    let code_reference = run(
+        &fixture.database,
+        [
+            "code-ref-add",
+            &fixture.record_id,
+            "not-valid",
+            "src/lib.rs",
+        ],
+    );
+    assert!(!code_reference.status.success());
+    assert!(output_text(&code_reference).contains("unsupported relationship"));
+}

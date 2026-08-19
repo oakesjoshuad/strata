@@ -8,7 +8,8 @@ mod render;
 use args::{Cli, Command};
 use clap::Parser;
 use output::{
-    emit_json, output_capabilities, output_relationships, output_schema, print_graph, print_value,
+    emit_json, output_capabilities, output_relationships, output_schema, print_code_reference,
+    print_evidence, print_graph, print_value,
 };
 use records::{RecordId, RecordKind, Status};
 use render::{render_record, render_template};
@@ -144,6 +145,45 @@ fn execute(command: Command, store: &mut Store) -> Result<(), CliError> {
         } => {
             let edge = store.link(&parse_id(&source)?, &relation, &parse_id(&target)?)?;
             println!("{} {} {}", edge.source_id, edge.relation, edge.target_id);
+        }
+        Command::EvidenceAdd {
+            id,
+            kind,
+            title,
+            uri,
+            content,
+            metadata,
+            json: json_flag,
+        } => {
+            let metadata = metadata.as_deref().map(serde_json::from_str).transpose()?;
+            let evidence = store.add_evidence(
+                &parse_id(&id)?,
+                &kind,
+                &title,
+                uri.as_deref(),
+                content.as_deref(),
+                metadata.as_ref(),
+            )?;
+            print_evidence(evidence, json_flag)?;
+        }
+        Command::CodeRefAdd {
+            id,
+            relation,
+            path,
+            symbol,
+            line_start,
+            line_end,
+            json: json_flag,
+        } => {
+            let code_reference = store.add_code_reference(
+                &parse_id(&id)?,
+                &relation,
+                &path,
+                symbol.as_deref(),
+                line_start,
+                line_end,
+            )?;
+            print_code_reference(code_reference, json_flag)?;
         }
         Command::Status {
             id,

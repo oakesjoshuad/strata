@@ -1,5 +1,6 @@
 use crate::{build_version, CliError};
 use records::RecordKind;
+use records::{CodeReference, Evidence};
 use serde::Serialize;
 use serde_json::json;
 use std::fmt::Debug;
@@ -47,17 +48,45 @@ pub(crate) fn print_graph(graph: Graph, json_flag: bool) -> Result<(), CliError>
     Ok(())
 }
 
+pub(crate) fn print_evidence(evidence: Evidence, json_flag: bool) -> Result<(), CliError> {
+    if json_flag {
+        emit_json(evidence, true)?;
+    } else {
+        println!("{} [{}] {}", evidence.id, evidence.kind, evidence.title);
+    }
+    Ok(())
+}
+
+pub(crate) fn print_code_reference(
+    code_reference: CodeReference,
+    json_flag: bool,
+) -> Result<(), CliError> {
+    if json_flag {
+        emit_json(code_reference, true)?;
+    } else {
+        match code_reference.symbol {
+            Some(symbol) => println!(
+                "{} {}::{symbol}",
+                code_reference.relation, code_reference.path
+            ),
+            None => println!("{} {}", code_reference.relation, code_reference.path),
+        }
+    }
+    Ok(())
+}
+
 pub(crate) fn output_schema(kind: RecordKind, json_flag: bool) -> Result<(), CliError> {
     let value = json!({"kind": kind, "schema": format!("{}/v1", kind.slug()), "required_fields": kind.required_fields(), "statuses": kind.statuses()});
     emit_json(value, json_flag)
 }
 
 pub(crate) fn output_capabilities(json_flag: bool) -> Result<(), CliError> {
-    let value = json!({"version": build_version(), "kinds": RecordKind::ALL, "commands": ["init", "new", "show", "search", "graph", "render", "export", "template", "history", "link", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"]});
+    let value = json!({"version": build_version(), "kinds": RecordKind::ALL, "commands": ["init", "new", "show", "search", "graph", "render", "export", "template", "history", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"]});
     emit_json(value, json_flag)
 }
 
 pub(crate) fn output_relationships(json_flag: bool) -> Result<(), CliError> {
-    let value = json!({"relationships": records::RELATIONSHIPS});
+    let value =
+        json!({"relationships": records::RELATIONSHIPS, "evidence_kinds": records::EVIDENCE_KINDS});
     emit_json(value, json_flag)
 }
