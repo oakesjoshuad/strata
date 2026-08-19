@@ -2,8 +2,8 @@
 id: "ADR-0013"
 title: "Add a native SQL dump/restore projection as a full-fidelity backup, separate from the Markdown projection"
 record-type: adr
-status: proposed
-revision: 1
+status: accepted
+revision: 2
 date: 2026-08-19
 slug: add-a-native-sql-dump-restore-projection-as-a-full-fidelity-back
 tags: []
