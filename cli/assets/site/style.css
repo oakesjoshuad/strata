@@ -1,23 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 :root {
-  color-scheme: light;
-  --background: #f7f7f5;
-  --surface: #ffffff;
-  --text: #202124;
-  --muted: #65686d;
-  --border: #d9dadd;
-  --accent: #315f8c;
-  --code: #eeeeec;
+  /* Nord palette */
+  --nord0: #2e3440;
+  --nord1: #3b4252;
+  --nord2: #434c5e;
+  --nord3: #4c566a;
+  --nord4: #d8dee9;
+  --nord5: #e5e9f0;
+  --nord6: #eceff4;
+  --nord7: #8fbcbb;
+  --nord8: #88c0d0;
+  --nord9: #81a1c1;
+  --nord10: #5e81ac;
+  --nord11: #bf616a;
+  --nord12: #d08770;
+  --nord13: #ebcb8b;
+  --nord14: #a3be8c;
+  --nord15: #b48ead;
+
+  /* Semantic layer -- daylight (light) is the default on bare :root */
+  --surface-00: var(--nord6);
+  --surface-01: var(--nord5);
+  --surface-02: var(--nord4);
+  --surface-03: rgba(46, 52, 64, 0.12);
+  --text-primary: var(--nord0);
+  --text-secondary: var(--nord2);
+  --text-tertiary: var(--nord3);
+  --accent-primary: var(--nord10);
+  --accent-error: var(--nord11);
+  --accent-warning: var(--nord12);
+  --accent-success: var(--nord14);
+
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+
+  color-scheme: light dark;
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --background: #1d1f21;
-  --surface: #282b2e;
-  --text: #e8eaed;
-  --muted: #b4b7bb;
-  --border: #4b4f54;
-  --accent: #8ab4f8;
-  --code: #34383d;
+/* System dark preference, unless the visitor explicitly chose light via the toggle */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface-00: var(--nord0);
+    --surface-01: var(--nord1);
+    --surface-02: var(--nord2);
+    --surface-03: var(--nord3);
+    --text-primary: var(--nord6);
+    --text-secondary: var(--nord4);
+    --text-tertiary: var(--nord4);
+    --accent-primary: var(--nord8);
+  }
+}
+
+/* Explicit toggle always wins, regardless of system preference */
+:root[data-theme='dark'] {
+  --surface-00: var(--nord0);
+  --surface-01: var(--nord1);
+  --surface-02: var(--nord2);
+  --surface-03: var(--nord3);
+  --text-primary: var(--nord6);
+  --text-secondary: var(--nord4);
+  --text-tertiary: var(--nord4);
+  --accent-primary: var(--nord8);
 }
 
 * {
@@ -28,13 +72,15 @@ body {
   max-width: 54rem;
   margin: 0 auto;
   padding: 0 1.25rem;
-  background: var(--background);
-  color: var(--text);
-  font: 1rem/1.65 system-ui, sans-serif;
+  background: var(--surface-00);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.65;
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-primary);
 }
 
 .site-header,
@@ -46,17 +92,18 @@ a {
 }
 
 .site-title {
-  color: var(--text);
+  color: var(--text-primary);
   font-weight: 700;
   text-decoration: none;
 }
 
 #theme-toggle {
-  border: 1px solid var(--border);
+  border: 1px solid var(--surface-03);
   border-radius: 0.35rem;
   padding: 0.4rem 0.7rem;
-  background: var(--surface);
-  color: var(--text);
+  background: var(--surface-01);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
   cursor: pointer;
 }
 
@@ -66,25 +113,27 @@ main {
 
 article {
   padding: 2.5rem clamp(1.25rem, 4vw, 4rem);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--surface-01);
+  border: 1px solid var(--surface-03);
   border-radius: 0.5rem;
 }
 
 .record-header {
   margin-bottom: 2.5rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--surface-03);
 }
 
 .record-id,
 .record-summary,
 .site-footer {
-  color: var(--muted);
+  color: var(--text-secondary);
 }
 
 .record-id {
   margin-bottom: 0.25rem;
-  font: 0.85rem/1.4 ui-monospace, monospace;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.4;
   letter-spacing: 0.05em;
 }
 
@@ -92,6 +141,7 @@ h1,
 h2,
 h3 {
   line-height: 1.2;
+  color: var(--text-primary);
 }
 
 .record-summary {
@@ -104,16 +154,29 @@ h3 {
 .record-kind,
 .record-status {
   padding: 0.1rem 0.45rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--surface-03);
   border-radius: 0.25rem;
 }
 
 pre,
 code {
-  background: var(--code);
+  font-family: var(--font-mono);
+  background: var(--surface-02);
+}
+
+code {
+  font-size: 0.9em;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.2rem;
 }
 
 pre {
   overflow-x: auto;
   padding: 1rem;
+  border-radius: 0.35rem;
+}
+
+pre code {
+  padding: 0;
+  background: none;
 }
