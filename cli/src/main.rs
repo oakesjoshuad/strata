@@ -51,6 +51,8 @@ fn run() -> Result<(), CliError> {
         cli.database.as_deref(),
         command.export_target(),
         command.dump_target(),
+        cli.publish_target.as_deref(),
+        cli.renderer_command.as_deref(),
     )?;
     let path = config.database.value.clone();
     match command {

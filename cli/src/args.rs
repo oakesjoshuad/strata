@@ -10,6 +10,12 @@ pub(crate) struct Cli {
     /// Path to the SQLite database (CLI, STRATA_DATABASE, config file, or default)
     #[arg(long, global = true, value_name = "PATH")]
     pub(crate) database: Option<PathBuf>,
+    /// Publication artifact directory
+    #[arg(long, global = true, value_name = "PATH")]
+    pub(crate) publish_target: Option<PathBuf>,
+    /// External publication renderer command template
+    #[arg(long, global = true, value_name = "COMMAND")]
+    pub(crate) renderer_command: Option<String>,
 }
 
 #[derive(Subcommand)]
