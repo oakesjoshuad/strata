@@ -1,4 +1,6 @@
+use crate::args::Cli;
 use crate::{build_version, config, CliError};
+use clap::CommandFactory;
 use records::RecordKind;
 use records::{CodeReference, Evidence, Record};
 use serde::Serialize;
@@ -158,7 +160,33 @@ pub(crate) fn output_capabilities(
         "export_target": {"value": resolved.export_target.value, "source": resolved.export_target.source.as_str()},
         "dump_target": {"value": resolved.dump_target.value, "source": resolved.dump_target.source.as_str()},
     });
-    let value = json!({"version": build_version(), "kinds": kinds, "commands": ["init", "new", "show", "search", "context", "graph", "render", "export", "dump", "restore", "template", "history", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "context", "graph", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "configuration": configuration});
+    let subcommands = Cli::command()
+        .get_subcommands()
+        .map(|command| {
+            (
+                command.get_name().to_string(),
+                command
+                    .get_arguments()
+                    .any(|argument| argument.get_id() == "json"),
+            )
+        })
+        .collect::<Vec<_>>();
+    let commands = subcommands
+        .iter()
+        .map(|(name, _)| name.clone())
+        .collect::<Vec<_>>();
+    let json_output = subcommands
+        .iter()
+        .filter(|(_, supports_json)| *supports_json)
+        .map(|(name, _)| name.clone())
+        .collect::<Vec<_>>();
+    let value = json!({
+        "version": build_version(),
+        "kinds": kinds,
+        "commands": commands,
+        "json_output": json_output,
+        "configuration": configuration
+    });
     emit_json(value, json_flag)
 }
 

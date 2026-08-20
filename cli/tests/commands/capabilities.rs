@@ -11,4 +11,16 @@ fn capabilities_json_describes_all_kind_purposes() {
         assert!(kind["kind"].is_string());
         assert!(!kind["purpose"].as_str().expect("purpose").is_empty());
     }
+
+    let commands = capabilities["commands"]
+        .as_array()
+        .expect("command descriptions");
+    let json_output = capabilities["json_output"]
+        .as_array()
+        .expect("JSON-capable command descriptions");
+    assert!(commands.iter().any(|name| name == "capabilities"));
+    assert!(json_output.iter().any(|name| name == "capabilities"));
+    assert!(json_output
+        .iter()
+        .all(|name| commands.iter().any(|command| command == name)));
 }
