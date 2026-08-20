@@ -37,17 +37,25 @@ pub(crate) fn run(
     }
 
     let manifest = crate::manifest::build(store, config)?;
+    let site_index = manifest
+        .entries
+        .iter()
+        .map(|entry| (entry.id.clone(), format!("../{}", entry.publication_path)))
+        .collect::<BTreeMap<_, _>>();
     if check {
         return check_manifest(&manifest, &config.publish_target.value);
     }
 
     let scratch = ScratchDirectory::new()?;
     let template = assets::write_template(scratch.path())?;
+    let lua_filter = assets::write_lua_filter(scratch.path())?;
     let mut files = Vec::with_capacity(manifest.entries.len() + 2);
     for (index, entry) in manifest.entries.iter().enumerate() {
         files.push(render_entry(
             scratch.path(),
             &template,
+            &lua_filter,
+            &site_index,
             index,
             entry,
             &config.publish_renderer.value,
@@ -75,6 +83,8 @@ pub(crate) fn run(
 fn render_entry(
     scratch: &Path,
     template: &Path,
+    lua_filter: &Path,
+    site_index: &BTreeMap<String, String>,
     index: usize,
     entry: &ManifestEntry,
     renderer: &str,
@@ -94,6 +104,8 @@ fn render_entry(
             metadata: &metadata,
             template,
             css: &css,
+            lua_filter,
+            site_index,
             entry,
         },
     )?;

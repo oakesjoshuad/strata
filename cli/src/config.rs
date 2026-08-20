@@ -9,7 +9,7 @@ pub(crate) const EXPORT_TARGET_DEFAULT: &str = "docs/records";
 pub(crate) const DUMP_TARGET_DEFAULT: &str = "docs/db-snapshot.sql";
 pub(crate) const PUBLISH_TARGET_DEFAULT: &str = ".strata/site";
 pub(crate) const PUBLISH_RENDERER_DEFAULT: &str =
-    "pandoc {input} -o {output} --standalone --metadata-file {metadata} --template {template} --css {css}";
+    "pandoc {input} -o {output} --standalone --metadata-file {metadata} --template {template} --css {css} --lua-filter {lua_filter}";
 const CONFIG_FILE: &str = "strata.config.json";
 
 #[derive(Debug, Eq, PartialEq)]

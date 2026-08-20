@@ -1,6 +1,7 @@
 use crate::manifest::ManifestEntry;
 use crate::CliError;
 use serde_json::json;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -11,6 +12,8 @@ pub(crate) struct RenderJob<'a> {
     pub(crate) metadata: &'a Path,
     pub(crate) template: &'a Path,
     pub(crate) css: &'a Path,
+    pub(crate) lua_filter: &'a Path,
+    pub(crate) site_index: &'a BTreeMap<String, String>,
     pub(crate) entry: &'a ManifestEntry,
 }
 
@@ -31,6 +34,7 @@ pub(crate) fn render(command_template: &str, job: &RenderJob<'_>) -> Result<Vec<
         // runs but each item's fields resolve empty) -- so the resolved
         // list is kept under a distinct key instead.
         "publication_relationships": job.entry.relationships,
+        "site_index": job.site_index,
     });
     fs::write(job.metadata, serde_json::to_vec(&metadata)?)?;
 
@@ -79,6 +83,7 @@ fn substitute(command: &str, job: &RenderJob<'_>) -> String {
         .replace("{metadata}", &job.metadata.display().to_string())
         .replace("{template}", &job.template.display().to_string())
         .replace("{css}", &job.css.display().to_string())
+        .replace("{lua_filter}", &job.lua_filter.display().to_string())
 }
 
 #[cfg(test)]
@@ -97,6 +102,8 @@ mod tests {
         metadata: std::path::PathBuf,
         template: std::path::PathBuf,
         css: std::path::PathBuf,
+        lua_filter: std::path::PathBuf,
+        site_index: BTreeMap<String, String>,
     }
 
     impl Drop for Fixture {
@@ -113,6 +120,8 @@ mod tests {
                 metadata: &self.metadata,
                 template: &self.template,
                 css: &self.css,
+                lua_filter: &self.lua_filter,
+                site_index: &self.site_index,
                 entry: &self.entry,
             }
         }
@@ -137,7 +146,11 @@ mod tests {
         let metadata = directory.join("metadata.json");
         let template = directory.join("template.html");
         let css = directory.join("style.css");
+        let lua_filter = directory.join("xref.lua");
+        let site_index =
+            BTreeMap::from([("ADR-0002".into(), "../adr/0002-target-record.html".into())]);
         fs::write(&input, "# Source").expect("input");
+        fs::write(&lua_filter, assets::LUA_FILTER).expect("Lua filter");
         Fixture {
             directory,
             entry: ManifestEntry {
@@ -158,6 +171,8 @@ mod tests {
             metadata,
             template,
             css,
+            lua_filter,
+            site_index,
         }
     }
 
@@ -178,6 +193,10 @@ mod tests {
         assert_eq!(metadata["revision"], 3);
         assert_eq!(metadata["tags"], serde_json::json!(["rust", "sqlite"]));
         assert_eq!(metadata["publication_relationships"], serde_json::json!([]));
+        assert_eq!(
+            metadata["site_index"]["ADR-0002"],
+            "../adr/0002-target-record.html"
+        );
     }
 
     #[test]
@@ -217,9 +236,13 @@ mod tests {
             metadata: &fixture.metadata,
             template: &template,
             css: &css,
+            lua_filter: &fixture.lua_filter,
+            site_index: &fixture.site_index,
             entry: &fixture.entry,
         };
-        let command = PUBLISH_RENDERER_DEFAULT.replace("{css}", "../_assets/style.css");
+        let command = PUBLISH_RENDERER_DEFAULT
+            .replace("{css}", "../_assets/style.css")
+            .replace("{lua_filter}", &fixture.lua_filter.display().to_string());
         let output = render(&command, &job).expect("Pandoc render");
         let output = String::from_utf8(output).expect("HTML output");
         for expected in [
@@ -255,7 +278,7 @@ mod tests {
         }];
         fs::write(
             &fixture.input,
-            "# ADR-0001: Published renderer test\n\n## Decision\n\nUse the shipped template.\n",
+            "# ADR-0001: Published renderer test\n\nSee ADR-0002. Unknown RFC-9999.\n\nInline `ADR-0002`.\n\n```text\nADR-0002\n```\n",
         )
         .expect("source");
         let template_directory = fixture.directory.join("template");
@@ -268,17 +291,27 @@ mod tests {
             metadata: &fixture.metadata,
             template: &template,
             css: &css,
+            lua_filter: &fixture.lua_filter,
+            site_index: &fixture.site_index,
             entry: &fixture.entry,
         };
-        let command = PUBLISH_RENDERER_DEFAULT.replace("{css}", "../_assets/style.css");
+        let command = PUBLISH_RENDERER_DEFAULT
+            .replace("{css}", "../_assets/style.css")
+            .replace("{lua_filter}", &fixture.lua_filter.display().to_string());
         let output = render(&command, &job).expect("Pandoc render");
         let output = String::from_utf8(output).expect("HTML output");
         assert!(output.contains("class=\"relationships\""));
-        assert!(output.contains("href=\"../adr/0002-target-record.html\""));
-        assert!(output.contains("relates-to"));
-        assert!(output.contains("ADR-0002"));
-        assert!(output.contains("Target"));
-        assert!(output.contains("record"));
+        assert_eq!(
+            output
+                .matches("href=\"../adr/0002-target-record.html\"")
+                .count(),
+            2
+        );
+        assert!(output.contains("Target record"));
+        assert!(output.contains("RFC-9999"));
+        assert!(!output.contains("href=\"../rfc-9999"));
+        assert!(output.contains("<code>ADR-0002</code>"));
+        assert!(output.contains("<pre class=\"text\"><code>ADR-0002"));
     }
 
     #[test]
