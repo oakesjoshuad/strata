@@ -5,6 +5,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
+blake3.workspace = true
 chrono.workspace = true
 clap.workspace = true
 records = { path = "../records" }

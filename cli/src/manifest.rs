@@ -4,8 +4,6 @@ use crate::{build_version, CliError};
 use records::Record;
 use serde::Serialize;
 use serde_json::Value as JsonValue;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::path::Path;
 use store::Store;
 
@@ -104,9 +102,7 @@ fn tags(record: &Record) -> Result<Vec<String>, CliError> {
 }
 
 fn content_hash(markdown: &str) -> String {
-    let mut hasher = DefaultHasher::new();
-    markdown.hash(&mut hasher);
-    format!("{:016x}", hasher.finish())
+    blake3::hash(markdown.as_bytes()).to_hex().to_string()
 }
 
 #[cfg(test)]
