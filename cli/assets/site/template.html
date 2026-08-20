@@ -41,7 +41,6 @@ $endfor$
           <span>revision $revision$</span>
         </p>
       </header>
-      $if(relationships)$
       $if(publication_relationships)$
       <section class="relationships" aria-labelledby="relationships-heading">
         <h2 id="relationships-heading">Relationships</h2>
@@ -54,7 +53,6 @@ $for(publication_relationships)$
 $endfor$
         </ul>
       </section>
-      $endif$
       $endif$
       $body$
     </article>

@@ -23,10 +23,13 @@ pub(crate) fn render(command_template: &str, job: &RenderJob<'_>) -> Result<Vec<
         "slug": job.entry.slug,
         "title": job.entry.title,
         "tags": job.entry.tags,
-        "relationships": job.entry.relationships,
         // The Markdown input already has a canonical `relationships` map in
-        // its frontmatter. Keep resolved publication links in a separate
-        // metadata key so Pandoc does not merge the two different shapes.
+        // its frontmatter (relation kind -> raw target IDs). Emitting the
+        // resolved publication links under that same key does not cleanly
+        // override it -- Pandoc merges the two differently-shaped values
+        // (verified empirically: the resulting $for(relationships)$ loop
+        // runs but each item's fields resolve empty) -- so the resolved
+        // list is kept under a distinct key instead.
         "publication_relationships": job.entry.relationships,
     });
     fs::write(job.metadata, serde_json::to_vec(&metadata)?)?;
@@ -174,7 +177,6 @@ mod tests {
         assert_eq!(metadata["title"], "Renderer test");
         assert_eq!(metadata["revision"], 3);
         assert_eq!(metadata["tags"], serde_json::json!(["rust", "sqlite"]));
-        assert_eq!(metadata["relationships"], serde_json::json!([]));
         assert_eq!(metadata["publication_relationships"], serde_json::json!([]));
     }
 
@@ -182,7 +184,7 @@ mod tests {
     fn empty_relationships_are_not_rendered_by_the_backend_contract() {
         let fixture = fixture();
         let command = fixture.command(
-            r#"if grep -q '"relationships":\[\]' "$2"; then printf '<article>no relationships</article>' > "$1"; else printf '<section class="relationships">relationships</section>' > "$1"; fi"#,
+            r#"if grep -q '"publication_relationships":\[\]' "$2"; then printf '<article>no relationships</article>' > "$1"; else printf '<section class="relationships">relationships</section>' > "$1"; fi"#,
         );
         let contents = render(&command, &fixture.job()).expect("render");
         let html = String::from_utf8(contents).expect("HTML");
