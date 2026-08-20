@@ -11,6 +11,8 @@ mod output;
 mod parse;
 mod render;
 #[allow(dead_code)]
+mod render_backend;
+#[allow(dead_code)]
 mod stage;
 
 use args::{Cli, Command};
