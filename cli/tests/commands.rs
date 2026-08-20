@@ -130,3 +130,5 @@ mod capabilities;
 mod configuration;
 #[path = "commands/schema.rs"]
 mod schema;
+#[path = "commands/validation.rs"]
+mod validation;

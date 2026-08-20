@@ -283,6 +283,75 @@ fn validate_reports_stale_projections() {
 }
 
 #[test]
+fn validate_from_nested_directory_uses_repository_default_targets() {
+    let directory = temporary_directory("validate-default-targets");
+    let root = directory.join("repo");
+    let nested = root.join("nested");
+    let database = root.join("selected.db");
+    fs::create_dir_all(root.join(".git")).expect("git marker");
+    fs::create_dir_all(&nested).expect("nested directory");
+
+    let created = run_in_directory(
+        &root,
+        &database,
+        [
+            "new",
+            "adr",
+            "Nested validation test",
+            "--document",
+            r#"{"schema":"adr/v1","context":"test","decision":"test","alternatives":"test","consequences":"test","evidence":"test"}"#,
+            "--json",
+        ],
+    );
+    assert!(created.status.success(), "{}", output_text(&created));
+    let record: Value = serde_json::from_slice(&created.stdout).expect("record JSON");
+    let record_id = format!(
+        "ADR-{:04}",
+        record["id"]["number"].as_u64().expect("record number")
+    );
+
+    let exported = run_in_directory(&root, &database, ["export"]);
+    assert!(exported.status.success(), "{}", output_text(&exported));
+    let dumped = run_in_directory(&root, &database, ["dump"]);
+    assert!(dumped.status.success(), "{}", output_text(&dumped));
+
+    let retitled = run(&database, ["retitle", &record_id, "Retitled nested test"]);
+    assert!(retitled.status.success(), "{}", output_text(&retitled));
+
+    let validated = Command::new(env!("CARGO_BIN_EXE_strata"))
+        .current_dir(&nested)
+        .env_remove("STRATA_DATABASE")
+        .env_remove("STRATA_EXPORT_TARGET")
+        .env_remove("STRATA_DUMP_TARGET")
+        .args([
+            "--database",
+            database.to_str().expect("database path"),
+            "validate",
+            "--json",
+        ])
+        .output()
+        .expect("run strata");
+    assert!(validated.status.success(), "{}", output_text(&validated));
+    let validation: Value = serde_json::from_slice(&validated.stdout).expect("validation JSON");
+    assert_eq!(validation["valid"], false);
+    let issues = validation["issues"].as_array().expect("validation issues");
+    let export_path = root.join("docs/records/adr/0001-nested-validation-test.md");
+    let dump_path = root.join("docs/db-snapshot.sql");
+    assert!(issues.iter().any(|issue| {
+        issue
+            .as_str()
+            .is_some_and(|issue| issue.contains(&format!("different {}", export_path.display())))
+    }));
+    assert!(issues.iter().any(|issue| {
+        issue
+            .as_str()
+            .is_some_and(|issue| issue.contains(&format!("different {}", dump_path.display())))
+    }));
+
+    cleanup_temporary_directory(directory);
+}
+
+#[test]
 fn dump_then_restore_round_trips_through_the_binary() {
     let fixture = Fixture::new();
     let dumped = run_in_directory(&fixture.directory, &fixture.database, ["dump"]);

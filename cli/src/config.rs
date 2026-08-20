@@ -68,15 +68,23 @@ pub(crate) fn resolve(
         export_target,
         dump_target,
     };
+    let database = resolve_path(
+        inputs.database,
+        "STRATA_DATABASE",
+        file.as_ref().and_then(|value| value.database.as_deref()),
+        DATABASE_DEFAULT,
+        root.as_deref(),
+        root.as_deref(),
+    )?;
+    let projection_root = match &database.source {
+        Source::Cli | Source::Env => {
+            database_repository_root(&database.value, &current_dir, root.as_deref())
+        }
+        Source::File | Source::Default => root.clone(),
+    };
 
     Ok(ResolvedConfig {
-        database: resolve_path(
-            inputs.database,
-            "STRATA_DATABASE",
-            file.as_ref().and_then(|value| value.database.as_deref()),
-            DATABASE_DEFAULT,
-            root.as_deref(),
-        )?,
+        database,
         export_target: resolve_path(
             inputs.export_target,
             "STRATA_EXPORT_TARGET",
@@ -84,6 +92,7 @@ pub(crate) fn resolve(
                 .and_then(|value| value.export_target.as_deref()),
             EXPORT_TARGET_DEFAULT,
             root.as_deref(),
+            projection_root.as_deref(),
         )?,
         dump_target: resolve_path(
             inputs.dump_target,
@@ -91,6 +100,7 @@ pub(crate) fn resolve(
             file.as_ref().and_then(|value| value.dump_target.as_deref()),
             DUMP_TARGET_DEFAULT,
             root.as_deref(),
+            projection_root.as_deref(),
         )?,
     })
 }
@@ -100,7 +110,8 @@ fn resolve_path(
     environment_name: &str,
     file: Option<&str>,
     default: &str,
-    repository_root: Option<&Path>,
+    file_root: Option<&Path>,
+    default_root: Option<&Path>,
 ) -> Result<ResolvedPath, CliError> {
     if let Some(path) = cli {
         validate_path(path, "CLI flag")?;
@@ -130,7 +141,7 @@ fn resolve_path(
     if let Some(value) = file {
         let path = PathBuf::from(value);
         validate_path(&path, "configuration file")?;
-        let value = match repository_root {
+        let value = match file_root {
             Some(root) if path.is_relative() => root.join(path),
             _ => path,
         };
@@ -140,10 +151,32 @@ fn resolve_path(
         });
     }
 
+    let path = PathBuf::from(default);
+    let value = match default_root {
+        Some(root) if path.is_relative() => root.join(path),
+        _ => path,
+    };
     Ok(ResolvedPath {
-        value: PathBuf::from(default),
+        value,
         source: Source::Default,
     })
+}
+
+fn database_repository_root(
+    database: &Path,
+    current_dir: &Path,
+    fallback: Option<&Path>,
+) -> Option<PathBuf> {
+    let absolute = if database.is_relative() {
+        current_dir.join(database)
+    } else {
+        database.to_path_buf()
+    };
+    let parent = absolute.parent()?;
+    match repository_root(parent) {
+        Some(root) => Some(root),
+        None => fallback.map(Path::to_path_buf),
+    }
 }
 
 fn validate_path(path: &Path, source: &str) -> Result<(), CliError> {
@@ -226,6 +259,61 @@ mod tests {
         env::remove_var("STRATA_DATABASE");
         let config = resolve(None, None, None).expect("config");
         assert_eq!(config.database.source, Source::Default);
+        env::set_current_dir(current).expect("restore directory");
+        fs::remove_dir_all(directory).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn defaults_are_anchored_to_repository_root_from_nested_directory() {
+        let _guard = environment_lock().lock().expect("environment lock");
+        let directory = tempfile_directory("default-root");
+        let root = directory.join("repo");
+        let nested = root.join("nested");
+        fs::create_dir_all(root.join(".git")).expect("git marker");
+        fs::create_dir_all(&nested).expect("nested directory");
+        let current = env::current_dir().expect("current directory");
+        env::set_current_dir(&nested).expect("nested directory");
+        env::remove_var("STRATA_DATABASE");
+        env::remove_var("STRATA_EXPORT_TARGET");
+        env::remove_var("STRATA_DUMP_TARGET");
+
+        let config = resolve(None, None, None).expect("config");
+        assert_eq!(config.database.value, root.join(DATABASE_DEFAULT));
+        assert_eq!(config.export_target.value, root.join(EXPORT_TARGET_DEFAULT));
+        assert_eq!(config.dump_target.value, root.join(DUMP_TARGET_DEFAULT));
+        assert_eq!(config.database.source, Source::Default);
+        assert_eq!(config.export_target.source, Source::Default);
+        assert_eq!(config.dump_target.source, Source::Default);
+
+        env::set_current_dir(current).expect("restore directory");
+        fs::remove_dir_all(directory).expect("fixture cleanup");
+    }
+
+    #[test]
+    fn defaults_are_anchored_to_explicit_database_repository() {
+        let _guard = environment_lock().lock().expect("environment lock");
+        let directory = tempfile_directory("selected-database-root");
+        let selected = directory.join("selected");
+        let caller = directory.join("caller");
+        fs::create_dir_all(selected.join(".git")).expect("selected git marker");
+        fs::create_dir_all(caller.join(".git")).expect("caller git marker");
+        let database = selected.join("strata.db");
+        let current = env::current_dir().expect("current directory");
+        env::set_current_dir(&caller).expect("caller directory");
+        env::remove_var("STRATA_DATABASE");
+        env::remove_var("STRATA_EXPORT_TARGET");
+        env::remove_var("STRATA_DUMP_TARGET");
+
+        let config = resolve(Some(&database), None, None).expect("config");
+        assert_eq!(config.database.value, database);
+        assert_eq!(
+            config.export_target.value,
+            selected.join(EXPORT_TARGET_DEFAULT)
+        );
+        assert_eq!(config.dump_target.value, selected.join(DUMP_TARGET_DEFAULT));
+        assert!(!config.export_target.value.starts_with(&caller));
+        assert!(!config.dump_target.value.starts_with(&caller));
+
         env::set_current_dir(current).expect("restore directory");
         fs::remove_dir_all(directory).expect("fixture cleanup");
     }
