@@ -128,6 +128,8 @@ mod auxiliary;
 mod capabilities;
 #[path = "commands/configuration.rs"]
 mod configuration;
+#[path = "commands/publish.rs"]
+mod publish;
 #[path = "commands/schema.rs"]
 mod schema;
 #[path = "commands/validation.rs"]

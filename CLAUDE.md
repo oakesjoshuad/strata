@@ -138,6 +138,17 @@ identity, title, kind, status, revision, date, persisted slug, tags, and relatio
 Status lives in frontmatter only — never as a `## Status` heading in the body, that
 field is redundant with the frontmatter and has been stripped everywhere it appeared.
 
+`strata publish` produces a local, deployable static-site artifact at `.strata/site`
+by default. Unlike the `export` and `dump` projections above, the publication target
+lives under the gitignored `.strata/` directory and is not committed to the repository.
+Its `--publish-target` / `STRATA_PUBLISH_TARGET` / `publish_target` configuration and
+`--renderer-command` / `STRATA_PUBLISH_RENDERER` / `publish_renderer` configuration use
+the same CLI > environment variable > config file > default precedence established by
+ADR-0014 for `database`, `export_target`, and `dump_target`; this extends that existing
+resolution mechanism to two more values. The default renderer invokes a locally
+installed `pandoc` binary, which is an external dependency for `strata publish` only;
+`export`, `dump`, and `validate` do not require Pandoc.
+
 ## SQLite connection convention
 
 Every connection (`Store::open` / `Store::open_memory`) sets, before running
