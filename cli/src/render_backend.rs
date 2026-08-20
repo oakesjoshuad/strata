@@ -76,6 +76,8 @@ fn substitute(command: &str, job: &RenderJob<'_>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::assets;
+    use crate::config::PUBLISH_RENDERER_DEFAULT;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     struct Fixture {
@@ -164,6 +166,53 @@ mod tests {
         assert_eq!(metadata["title"], "Renderer test");
         assert_eq!(metadata["revision"], 3);
         assert_eq!(metadata["tags"], serde_json::json!(["rust", "sqlite"]));
+    }
+
+    // This smoke test needs a real Pandoc installation and is ignored in the
+    // normal test suite so environments without Pandoc remain green.
+    #[test]
+    #[ignore = "requires Pandoc installed on PATH"]
+    fn renders_shipped_template_with_real_pandoc() {
+        if let Err(error) = Command::new("pandoc").arg("--version").output() {
+            println!("skipping real Pandoc smoke test: {error}");
+            return;
+        }
+
+        let fixture = fixture();
+        fs::write(
+            &fixture.input,
+            "# ADR-0001: Published renderer test\n\n## Decision\n\nUse the shipped template.\n",
+        )
+        .expect("source");
+        let template_directory = fixture.directory.join("template");
+        fs::create_dir_all(&template_directory).expect("template directory");
+        let template = assets::write_template(&template_directory).expect("write template");
+        let css = std::path::PathBuf::from("../_assets/style.css");
+        let job = RenderJob {
+            input: &fixture.input,
+            output: &fixture.output,
+            metadata: &fixture.metadata,
+            template: &template,
+            css: &css,
+            entry: &fixture.entry,
+        };
+        let command = PUBLISH_RENDERER_DEFAULT.replace("{css}", "../_assets/style.css");
+        let output = render(&command, &job).expect("Pandoc render");
+        let output = String::from_utf8(output).expect("HTML output");
+
+        for expected in [
+            "Renderer test",
+            "ADR-0001",
+            "adr",
+            "accepted",
+            "<header",
+            "<main",
+            "<article",
+            "<footer",
+            "id=\"theme-toggle\"",
+        ] {
+            assert!(output.contains(expected), "output is missing {expected:?}");
+        }
     }
 
     #[test]

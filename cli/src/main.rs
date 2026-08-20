@@ -1,4 +1,6 @@
 mod args;
+#[allow(dead_code)]
+mod assets;
 mod commands;
 mod config;
 mod document;
