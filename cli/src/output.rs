@@ -127,6 +127,23 @@ pub(crate) fn print_evidence(evidence: Evidence, json_flag: bool) -> Result<(), 
     Ok(())
 }
 
+pub(crate) fn print_relationships(
+    relationships: Vec<records::Relationship>,
+    json_flag: bool,
+) -> Result<(), CliError> {
+    if json_flag {
+        emit_json(relationships, true)?;
+    } else {
+        for relationship in relationships {
+            println!(
+                "{} {} {}",
+                relationship.source_id, relationship.relation, relationship.target_id
+            );
+        }
+    }
+    Ok(())
+}
+
 pub(crate) fn print_code_reference(
     code_reference: CodeReference,
     json_flag: bool,

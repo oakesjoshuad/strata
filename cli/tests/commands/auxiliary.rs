@@ -73,10 +73,35 @@ fn link_emits_json_when_requested() {
         ["link", &fixture.record_id, "relates-to", &target, "--json"],
     );
     assert!(output.status.success(), "{}", output_text(&output));
-    let relationship: Value = serde_json::from_slice(&output.stdout).expect("relationship JSON");
+    let relationships: Value = serde_json::from_slice(&output.stdout).expect("relationship JSON");
+    let relationship = &relationships.as_array().expect("relationship array")[0];
     assert_eq!(relationship["source_id"]["number"], 1);
     assert_eq!(relationship["relation"], "relates-to");
     assert_eq!(relationship["target_id"]["number"], 2);
+}
+
+#[test]
+fn link_accepts_multiple_targets_and_emits_an_array() {
+    let fixture = Fixture::new();
+    let first = create_context_record(&fixture.database, "First link target");
+    let second = create_context_record(&fixture.database, "Second link target");
+    let output = run(
+        &fixture.database,
+        [
+            "link",
+            &fixture.record_id,
+            "relates-to",
+            &first,
+            &second,
+            "--json",
+        ],
+    );
+    assert!(output.status.success(), "{}", output_text(&output));
+    let relationships: Value = serde_json::from_slice(&output.stdout).expect("relationship JSON");
+    let relationships = relationships.as_array().expect("relationship array");
+    assert_eq!(relationships.len(), 2);
+    assert_eq!(relationships[0]["target_id"]["number"], 2);
+    assert_eq!(relationships[1]["target_id"]["number"], 3);
 }
 
 #[test]

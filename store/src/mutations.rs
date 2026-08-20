@@ -95,21 +95,37 @@ impl Store {
         relation: &str,
         target: &RecordId,
     ) -> Result<Relationship, StoreError> {
-        validate_relationship(source, relation, target)?;
+        self.link_many(source, relation, std::slice::from_ref(target))
+            .map(|mut v| v.remove(0))
+    }
+
+    pub fn link_many(
+        &mut self,
+        source: &RecordId,
+        relation: &str,
+        targets: &[RecordId],
+    ) -> Result<Vec<Relationship>, StoreError> {
         if self.get(source).is_err() {
             return Err(StoreError::NotFound(source.clone()));
         }
-        if self.get(target).is_err() {
-            return Err(StoreError::NotFound(target.clone()));
+        for target in targets {
+            validate_relationship(source, relation, target)?;
+            if self.get(target).is_err() {
+                return Err(StoreError::NotFound(target.clone()));
+            }
         }
         let tx = self.conn.transaction()?;
-        tx.execute("INSERT INTO record_relation (source_id, relation, target_id) VALUES (:source, :relation, :target)", rusqlite::named_params! { ":source": source, ":relation": relation, ":target": target })?;
+        let mut relationships = Vec::with_capacity(targets.len());
+        for target in targets {
+            tx.execute("INSERT INTO record_relation (source_id, relation, target_id) VALUES (:source, :relation, :target)", rusqlite::named_params! { ":source": source, ":relation": relation, ":target": target })?;
+            relationships.push(Relationship {
+                source_id: source.clone(),
+                relation: relation.into(),
+                target_id: target.clone(),
+            });
+        }
         tx.commit()?;
-        Ok(Relationship {
-            source_id: source.clone(),
-            relation: relation.into(),
-            target_id: target.clone(),
-        })
+        Ok(relationships)
     }
 }
 
@@ -220,5 +236,47 @@ mod tests {
             store.retitle(&record.id, "  "),
             Err(StoreError::Validation(ValidationError::EmptyTitle))
         ));
+    }
+
+    #[test]
+    fn link_many_rolls_back_completely_when_a_later_statement_fails() {
+        let mut store = Store::open_memory().expect("store");
+        let source = store
+            .create(
+                RecordKind::Adr,
+                "Source",
+                RecordKind::Adr.default_document("Source"),
+            )
+            .expect("source");
+        let targets = (0..3)
+            .map(|number| {
+                store
+                    .create(
+                        RecordKind::Adr,
+                        &format!("Target {number}"),
+                        RecordKind::Adr.default_document(&format!("Target {number}")),
+                    )
+                    .expect("target")
+            })
+            .collect::<Vec<_>>();
+        let target_ids = [
+            targets[0].id.clone(),
+            targets[1].id.clone(),
+            targets[2].id.clone(),
+            targets[0].id.clone(),
+        ];
+
+        assert!(store
+            .link_many(&source.id, "relates-to", &target_ids)
+            .is_err());
+        let count: u32 = store
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM record_relation WHERE source_id = :source",
+                rusqlite::named_params! { ":source": &source.id },
+                |row| row.get(0),
+            )
+            .expect("count relationships");
+        assert_eq!(count, 0);
     }
 }

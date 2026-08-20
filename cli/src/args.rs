@@ -115,8 +115,9 @@ pub(crate) enum Command {
         source: String,
         /// Relationship kind; see `strata relationships` for the full valid set
         relation: String,
-        /// Target record id
-        target: String,
+        /// Target record ids
+        #[arg(required = true, num_args = 1..)]
+        targets: Vec<String>,
         /// Print the result as JSON
         #[arg(long)]
         json: bool,

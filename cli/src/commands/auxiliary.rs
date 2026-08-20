@@ -2,7 +2,7 @@ use crate::args::Command;
 use crate::config;
 use crate::output::{
     emit_json, print_code_reference, print_dump_result, print_evidence, print_graph,
-    print_restored, print_value,
+    print_relationships, print_restored, print_value,
 };
 use crate::render::render_record;
 use crate::{dump, export, parse, CliError};
@@ -93,15 +93,17 @@ pub(crate) fn execute(
         Command::Link {
             source,
             relation,
-            target,
+            targets,
             json: json_flag,
         } => {
-            let edge = store.link(&parse_id(&source)?, &relation, &parse_id(&target)?)?;
-            if json_flag {
-                emit_json(edge, true)?;
-            } else {
-                println!("{} {} {}", edge.source_id, edge.relation, edge.target_id);
-            }
+            let targets = targets
+                .iter()
+                .map(|target| parse_id(target))
+                .collect::<Result<Vec<_>, _>>()?;
+            print_relationships(
+                store.link_many(&parse_id(&source)?, &relation, &targets)?,
+                json_flag,
+            )?;
         }
         Command::EvidenceAdd {
             id,
