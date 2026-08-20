@@ -5,6 +5,8 @@ mod document;
 mod dump;
 mod export;
 mod help;
+#[allow(dead_code)]
+mod manifest;
 mod output;
 mod parse;
 mod render;

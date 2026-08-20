@@ -43,7 +43,10 @@ pub(crate) fn stale_messages(store: &Store, root: &Path) -> Result<Vec<String>, 
         .collect())
 }
 
-fn rendered_records(store: &Store, root: &Path) -> Result<BTreeMap<PathBuf, String>, CliError> {
+pub(crate) fn rendered_records(
+    store: &Store,
+    root: &Path,
+) -> Result<BTreeMap<PathBuf, String>, CliError> {
     store
         .all_records()?
         .iter()
@@ -55,7 +58,7 @@ fn rendered_records(store: &Store, root: &Path) -> Result<BTreeMap<PathBuf, Stri
         .collect()
 }
 
-fn record_path(root: &Path, record: &Record) -> PathBuf {
+pub(crate) fn record_path(root: &Path, record: &Record) -> PathBuf {
     root.join(record.id.kind.slug())
         .join(format!("{:04}-{}.md", record.id.number, record.slug))
 }
