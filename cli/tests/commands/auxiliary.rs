@@ -237,6 +237,52 @@ fn dump_check_reports_different_file_and_missing_file() {
 }
 
 #[test]
+fn validate_reports_stale_projections() {
+    let fixture = Fixture::new();
+    let exported = run_in_directory(&fixture.directory, &fixture.database, ["export"]);
+    assert!(exported.status.success(), "{}", output_text(&exported));
+    let dumped = run_in_directory(&fixture.directory, &fixture.database, ["dump"]);
+    assert!(dumped.status.success(), "{}", output_text(&dumped));
+
+    let clean = run_in_directory(
+        &fixture.directory,
+        &fixture.database,
+        ["validate", "--json"],
+    );
+    assert!(clean.status.success(), "{}", output_text(&clean));
+    let clean: Value = serde_json::from_slice(&clean.stdout).expect("clean validation JSON");
+    assert_eq!(clean["valid"], true);
+    assert_eq!(clean["issues"].as_array().expect("clean issues").len(), 0);
+
+    let retitled = run(
+        &fixture.database,
+        ["retitle", &fixture.record_id, "Retitled CLI test"],
+    );
+    assert!(retitled.status.success(), "{}", output_text(&retitled));
+
+    let stale = run_in_directory(
+        &fixture.directory,
+        &fixture.database,
+        ["validate", "--json"],
+    );
+    assert!(stale.status.success(), "{}", output_text(&stale));
+    let stale_json: Value = serde_json::from_slice(&stale.stdout).expect("stale validation JSON");
+    assert_eq!(stale_json["valid"], false);
+    let stale_issues = stale_json["issues"].as_array().expect("stale issues");
+    assert!(stale_issues.iter().any(|issue| {
+        issue
+            .as_str()
+            .is_some_and(|issue| issue.contains("docs/records/adr/0001-cli-test.md"))
+    }));
+
+    let plain = run_in_directory(&fixture.directory, &fixture.database, ["validate"]);
+    assert!(!plain.status.success());
+    let plain_stdout = String::from_utf8_lossy(&plain.stdout);
+    assert!(plain_stdout.contains("ERROR different docs/records/adr/0001-cli-test.md"));
+    assert!(plain_stdout.contains("ERROR different docs/db-snapshot.sql"));
+}
+
+#[test]
 fn dump_then_restore_round_trips_through_the_binary() {
     let fixture = Fixture::new();
     let dumped = run_in_directory(&fixture.directory, &fixture.database, ["dump"]);

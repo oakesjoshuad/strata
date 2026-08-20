@@ -189,7 +189,9 @@ pub(crate) fn execute(
             )?;
         }
         Command::Validate { json: json_flag } => {
-            let issues = store.validate()?;
+            let mut issues = store.validate()?;
+            issues.extend(export::stale_messages(store, &config.export_target.value)?);
+            issues.extend(dump::stale_messages(store, &config.dump_target.value)?);
             let has_errors = issues.iter().any(|issue| !issue.starts_with("WARN "));
             if json_flag {
                 emit_json(json!({"valid": !has_errors, "issues": issues}), true)?;

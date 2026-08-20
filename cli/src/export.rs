@@ -35,6 +35,14 @@ pub(crate) fn run(store: &Store, check: bool, root: &Path) -> Result<(), CliErro
     Ok(())
 }
 
+pub(crate) fn stale_messages(store: &Store, root: &Path) -> Result<Vec<String>, CliError> {
+    let expected = rendered_records(store, root)?;
+    Ok(differences(&expected, root)?
+        .iter()
+        .map(difference_message)
+        .collect())
+}
+
 fn rendered_records(store: &Store, root: &Path) -> Result<BTreeMap<PathBuf, String>, CliError> {
     store
         .all_records()?

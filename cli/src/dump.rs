@@ -39,6 +39,13 @@ pub(crate) fn restore(store: &mut Store, path: &Path) -> Result<(), CliError> {
     Ok(())
 }
 
+pub(crate) fn stale_messages(store: &Store, path: &Path) -> Result<Vec<String>, CliError> {
+    match difference(&store.dump()?, path)? {
+        Some(difference) => Ok(vec![difference_message(&difference)]),
+        None => Ok(Vec::new()),
+    }
+}
+
 fn difference(expected: &str, path: &Path) -> Result<Option<Difference>, CliError> {
     match fs::read(path) {
         Ok(on_disk) if on_disk == expected.as_bytes() => Ok(None),
