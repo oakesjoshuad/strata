@@ -5,7 +5,7 @@ use crate::output::{
     print_relationships, print_restored, print_value,
 };
 use crate::render::render_record;
-use crate::{dump, export, parse, CliError};
+use crate::{dump, export, parse, publish, validate, CliError};
 use records::{RecordId, RecordKind, Status};
 use serde_json::json;
 use std::io::{self, IsTerminal};
@@ -76,6 +76,23 @@ pub(crate) fn execute(
             dump::run(store, check, &config.dump_target.value)?,
             &config.dump_target.value,
         )?,
+        Command::Publish { check, json } => {
+            let outcome = publish::run(store, check, config)?;
+            if json {
+                emit_json(&outcome, true)?;
+            } else if check {
+                if outcome.clean {
+                    println!("publish check clean");
+                } else {
+                    for issue in &outcome.issues {
+                        println!("{issue}");
+                    }
+                    return Err(CliError::Message("publish check failed".into()));
+                }
+            } else {
+                println!("published {} records", outcome.published);
+            }
+        }
         Command::Restore { path } => {
             dump::restore(store, &path)?;
             print_restored(&path);
@@ -189,9 +206,7 @@ pub(crate) fn execute(
             )?;
         }
         Command::Validate { json: json_flag } => {
-            let mut issues = store.validate()?;
-            issues.extend(export::stale_messages(store, &config.export_target.value)?);
-            issues.extend(dump::stale_messages(store, &config.dump_target.value)?);
+            let issues = validate::issues(store, config)?;
             let has_errors = issues.iter().any(|issue| !issue.starts_with("WARN "));
             if json_flag {
                 emit_json(json!({"valid": !has_errors, "issues": issues}), true)?;

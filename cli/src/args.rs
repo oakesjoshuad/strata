@@ -105,6 +105,15 @@ pub(crate) enum Command {
         #[arg(long, value_name = "PATH")]
         target: Option<PathBuf>,
     },
+    /// Publish all records as a static site, or verify the publication manifest with --check
+    Publish {
+        /// Verify the publication manifest instead of rendering and writing the site
+        #[arg(long)]
+        check: bool,
+        /// Print the result as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Restore a database from a native SQL dump into the --database target
     Restore {
         /// Path to the native SQL dump

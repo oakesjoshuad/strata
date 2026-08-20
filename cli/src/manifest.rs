@@ -2,7 +2,7 @@ use crate::config::ResolvedConfig;
 use crate::export::{record_path, rendered_records};
 use crate::{build_version, CliError};
 use records::Record;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::path::Path;
 use store::Store;
@@ -10,7 +10,7 @@ use store::Store;
 /// The version of the record-derived publication manifest schema.
 pub(crate) const SCHEMA_VERSION: u32 = 1;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Manifest {
     pub(crate) schema_version: u32,
     pub(crate) generated_at: String,
@@ -20,7 +20,7 @@ pub(crate) struct Manifest {
     pub(crate) entries: Vec<ManifestEntry>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct ManifestEntry {
     pub(crate) id: String,
     pub(crate) kind: String,
@@ -31,6 +31,10 @@ pub(crate) struct ManifestEntry {
     pub(crate) title: String,
     pub(crate) tags: Vec<String>,
     pub(crate) content_hash: String,
+    // The Markdown is needed for rendering but is intentionally not persisted
+    // in manifest.json; the hash is the persisted projection fingerprint.
+    #[serde(skip)]
+    pub(crate) rendered_markdown: String,
 }
 
 pub(crate) fn build(store: &Store, config: &ResolvedConfig) -> Result<Manifest, CliError> {
@@ -73,6 +77,7 @@ fn manifest_entry(
         title: record.title.clone(),
         tags: tags(record)?,
         content_hash: content_hash(markdown),
+        rendered_markdown: markdown.clone(),
     })
 }
 

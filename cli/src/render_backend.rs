@@ -141,6 +141,7 @@ mod tests {
                 title: "Renderer test".into(),
                 tags: vec!["rust".into(), "sqlite".into()],
                 content_hash: "hash".into(),
+                rendered_markdown: "# Renderer test".into(),
             },
             input,
             output,

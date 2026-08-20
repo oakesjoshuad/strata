@@ -48,7 +48,7 @@ const HELP_GROUPS: &[(&str, &[&str])] = &[
     ),
     (
         "Publish and verify",
-        &["render", "export", "dump", "restore", "validate"],
+        &["render", "export", "dump", "publish", "restore", "validate"],
     ),
     (
         "Self-description (for agents and tooling)",

@@ -11,11 +11,13 @@ mod help;
 mod manifest;
 mod output;
 mod parse;
+mod publish;
 mod render;
 #[allow(dead_code)]
 mod render_backend;
 #[allow(dead_code)]
 mod stage;
+mod validate;
 
 use args::{Cli, Command};
 use clap::Parser;
