@@ -2,8 +2,8 @@
 id: "RFC-0005"
 title: "Publish Strata's canonical knowledge as a static site"
 record-type: rfc
-status: draft
-revision: 5
+status: under-review
+revision: 7
 date: 2026-08-20
 slug: publish-engineering-and-rust-documentation-as-one-static-site
 tags: []
