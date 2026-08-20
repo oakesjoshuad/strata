@@ -42,7 +42,10 @@ const HELP_GROUPS: &[(&str, &[&str])] = &[
         "Link records and evidence",
         &["link", "evidence-add", "code-ref-add"],
     ),
-    ("Find and inspect", &["show", "search", "graph", "history"]),
+    (
+        "Find and inspect",
+        &["show", "search", "context", "graph", "history"],
+    ),
     (
         "Publish and verify",
         &["render", "export", "dump", "restore", "validate"],

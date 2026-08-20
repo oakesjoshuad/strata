@@ -1,10 +1,24 @@
 use crate::{build_version, config, CliError};
 use records::RecordKind;
-use records::{CodeReference, Evidence};
+use records::{CodeReference, Evidence, Record};
 use serde::Serialize;
 use serde_json::json;
 use std::fmt::Debug;
 use store::Graph;
+
+#[derive(Serialize)]
+struct ContextResult {
+    record: Record,
+    relationships: Vec<records::Relationship>,
+    evidence: Vec<Evidence>,
+    code_references: Vec<CodeReference>,
+}
+
+#[derive(Serialize)]
+struct ContextEnvelope {
+    query: String,
+    results: Vec<ContextResult>,
+}
 
 pub(crate) fn print_dump_result(
     result: crate::dump::DumpResult,
@@ -65,6 +79,43 @@ pub(crate) fn print_graph(graph: Graph, json_flag: bool) -> Result<(), CliError>
     Ok(())
 }
 
+pub(crate) fn print_context(
+    query: &str,
+    graphs: Vec<Graph>,
+    json_flag: bool,
+) -> Result<(), CliError> {
+    let results = graphs
+        .into_iter()
+        .map(|graph| ContextResult {
+            record: graph.record,
+            relationships: graph.relationships,
+            evidence: graph.evidence,
+            code_references: graph.code_references,
+        })
+        .collect::<Vec<_>>();
+    if json_flag {
+        return emit_json(
+            ContextEnvelope {
+                query: query.into(),
+                results,
+            },
+            true,
+        );
+    }
+    for result in results {
+        println!(
+            "{} [{}] {} ({} relationships, {} evidence, {} code references)",
+            result.record.id,
+            result.record.status,
+            result.record.title,
+            result.relationships.len(),
+            result.evidence.len(),
+            result.code_references.len()
+        );
+    }
+    Ok(())
+}
+
 pub(crate) fn print_evidence(evidence: Evidence, json_flag: bool) -> Result<(), CliError> {
     if json_flag {
         emit_json(evidence, true)?;
@@ -107,7 +158,7 @@ pub(crate) fn output_capabilities(
         "export_target": {"value": resolved.export_target.value, "source": resolved.export_target.source.as_str()},
         "dump_target": {"value": resolved.dump_target.value, "source": resolved.dump_target.source.as_str()},
     });
-    let value = json!({"version": build_version(), "kinds": kinds, "commands": ["init", "new", "show", "search", "graph", "render", "export", "dump", "restore", "template", "history", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "graph", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "configuration": configuration});
+    let value = json!({"version": build_version(), "kinds": kinds, "commands": ["init", "new", "show", "search", "context", "graph", "render", "export", "dump", "restore", "template", "history", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "json_output": ["new", "show", "search", "context", "graph", "link", "evidence-add", "code-ref-add", "status", "retitle", "revise", "validate", "schema", "capabilities", "relationships"], "configuration": configuration});
     emit_json(value, json_flag)
 }
 

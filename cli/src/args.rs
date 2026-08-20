@@ -54,6 +54,20 @@ pub(crate) enum Command {
         #[arg(long, default_value_t = 0)]
         offset: u32,
     },
+    /// Retrieve bounded search results with each record's one-hop graph context
+    Context {
+        /// Full-text query
+        query: String,
+        /// Print the result as JSON
+        #[arg(long)]
+        json: bool,
+        /// Maximum number of records to expand
+        #[arg(long, default_value_t = 10)]
+        limit: u32,
+        /// Number of matching records to skip
+        #[arg(long, default_value_t = 0)]
+        offset: u32,
+    },
     /// Show a record's relationships, evidence, and code references
     Graph {
         /// Record id, e.g. ADR-0001
@@ -99,16 +113,19 @@ pub(crate) enum Command {
     Link {
         /// Source record id
         source: String,
-        /// Relationship kind, e.g. constrains, produces, supersedes
+        /// Relationship kind; see `strata relationships` for the full valid set
         relation: String,
         /// Target record id
         target: String,
+        /// Print the result as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Attach supporting evidence to a record
     EvidenceAdd {
         /// Record id the evidence supports
         id: String,
-        /// Evidence kind, e.g. benchmark, experiment, issue
+        /// Evidence kind; see `strata relationships` for the full valid set
         kind: String,
         /// Evidence title
         title: String,
