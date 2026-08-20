@@ -41,6 +41,21 @@ $endfor$
           <span>revision $revision$</span>
         </p>
       </header>
+      $if(relationships)$
+      $if(publication_relationships)$
+      <section class="relationships" aria-labelledby="relationships-heading">
+        <h2 id="relationships-heading">Relationships</h2>
+        <ul class="relationship-list">
+$for(publication_relationships)$
+          <li>
+            <span class="relationship-kind">$publication_relationships.relation$</span>:
+            <a href="$publication_relationships.target_href$">$publication_relationships.target_id$: $publication_relationships.target_title$</a>
+          </li>
+$endfor$
+        </ul>
+      </section>
+      $endif$
+      $endif$
       $body$
     </article>
   </main>

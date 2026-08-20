@@ -23,6 +23,11 @@ pub(crate) fn render(command_template: &str, job: &RenderJob<'_>) -> Result<Vec<
         "slug": job.entry.slug,
         "title": job.entry.title,
         "tags": job.entry.tags,
+        "relationships": job.entry.relationships,
+        // The Markdown input already has a canonical `relationships` map in
+        // its frontmatter. Keep resolved publication links in a separate
+        // metadata key so Pandoc does not merge the two different shapes.
+        "publication_relationships": job.entry.relationships,
     });
     fs::write(job.metadata, serde_json::to_vec(&metadata)?)?;
 
@@ -78,6 +83,7 @@ mod tests {
     use super::*;
     use crate::assets;
     use crate::config::PUBLISH_RENDERER_DEFAULT;
+    use crate::manifest::ResolvedRelationship;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     struct Fixture {
@@ -141,6 +147,7 @@ mod tests {
                 title: "Renderer test".into(),
                 tags: vec!["rust".into(), "sqlite".into()],
                 content_hash: "hash".into(),
+                relationships: Vec::new(),
                 rendered_markdown: "# Renderer test".into(),
             },
             input,
@@ -167,6 +174,19 @@ mod tests {
         assert_eq!(metadata["title"], "Renderer test");
         assert_eq!(metadata["revision"], 3);
         assert_eq!(metadata["tags"], serde_json::json!(["rust", "sqlite"]));
+        assert_eq!(metadata["relationships"], serde_json::json!([]));
+        assert_eq!(metadata["publication_relationships"], serde_json::json!([]));
+    }
+
+    #[test]
+    fn empty_relationships_are_not_rendered_by_the_backend_contract() {
+        let fixture = fixture();
+        let command = fixture.command(
+            r#"if grep -q '"relationships":\[\]' "$2"; then printf '<article>no relationships</article>' > "$1"; else printf '<section class="relationships">relationships</section>' > "$1"; fi"#,
+        );
+        let contents = render(&command, &fixture.job()).expect("render");
+        let html = String::from_utf8(contents).expect("HTML");
+        assert!(!html.contains("class=\"relationships\""));
     }
 
     // This smoke test needs a real Pandoc installation and is ignored in the
@@ -200,7 +220,6 @@ mod tests {
         let command = PUBLISH_RENDERER_DEFAULT.replace("{css}", "../_assets/style.css");
         let output = render(&command, &job).expect("Pandoc render");
         let output = String::from_utf8(output).expect("HTML output");
-
         for expected in [
             "Renderer test",
             "ADR-0001",
@@ -214,6 +233,50 @@ mod tests {
         ] {
             assert!(output.contains(expected), "output is missing {expected:?}");
         }
+        assert!(!output.contains("class=\"relationships\""));
+    }
+
+    #[test]
+    #[ignore = "requires Pandoc installed on PATH"]
+    fn renders_relationship_link_with_real_pandoc() {
+        if let Err(error) = Command::new("pandoc").arg("--version").output() {
+            println!("skipping real Pandoc smoke test: {error}");
+            return;
+        }
+
+        let mut fixture = fixture();
+        fixture.entry.relationships = vec![ResolvedRelationship {
+            relation: "relates-to".into(),
+            target_id: "ADR-0002".into(),
+            target_title: "Target record".into(),
+            target_href: "../adr/0002-target-record.html".into(),
+        }];
+        fs::write(
+            &fixture.input,
+            "# ADR-0001: Published renderer test\n\n## Decision\n\nUse the shipped template.\n",
+        )
+        .expect("source");
+        let template_directory = fixture.directory.join("template");
+        fs::create_dir_all(&template_directory).expect("template directory");
+        let template = assets::write_template(&template_directory).expect("write template");
+        let css = std::path::PathBuf::from("../_assets/style.css");
+        let job = RenderJob {
+            input: &fixture.input,
+            output: &fixture.output,
+            metadata: &fixture.metadata,
+            template: &template,
+            css: &css,
+            entry: &fixture.entry,
+        };
+        let command = PUBLISH_RENDERER_DEFAULT.replace("{css}", "../_assets/style.css");
+        let output = render(&command, &job).expect("Pandoc render");
+        let output = String::from_utf8(output).expect("HTML output");
+        assert!(output.contains("class=\"relationships\""));
+        assert!(output.contains("href=\"../adr/0002-target-record.html\""));
+        assert!(output.contains("relates-to"));
+        assert!(output.contains("ADR-0002"));
+        assert!(output.contains("Target"));
+        assert!(output.contains("record"));
     }
 
     #[test]

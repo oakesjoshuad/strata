@@ -4,6 +4,7 @@ use crate::{build_version, CliError};
 use records::Record;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use std::collections::BTreeMap;
 use std::path::Path;
 use store::Store;
 
@@ -31,19 +32,62 @@ pub(crate) struct ManifestEntry {
     pub(crate) title: String,
     pub(crate) tags: Vec<String>,
     pub(crate) content_hash: String,
+    pub(crate) relationships: Vec<ResolvedRelationship>,
     // The Markdown is needed for rendering but is intentionally not persisted
     // in manifest.json; the hash is the persisted projection fingerprint.
     #[serde(skip)]
     pub(crate) rendered_markdown: String,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub(crate) struct ResolvedRelationship {
+    pub(crate) relation: String,
+    pub(crate) target_id: String,
+    pub(crate) target_title: String,
+    pub(crate) target_href: String,
+}
+
 pub(crate) fn build(store: &Store, config: &ResolvedConfig) -> Result<Manifest, CliError> {
     let records = store.all_records()?;
     let rendered = rendered_records(store, &config.export_target.value)?;
-    let entries = records
+    let mut entries = records
         .iter()
         .map(|record| manifest_entry(record, &rendered, &config.export_target.value))
         .collect::<Result<Vec<_>, _>>()?;
+
+    // Resolve graph edges from the entries already built above. This keeps
+    // publication assembly to one record query rather than re-querying each
+    // relationship target for its title and persisted publication path.
+    let index = entries
+        .iter()
+        .map(|entry| {
+            (
+                entry.id.clone(),
+                (entry.title.clone(), entry.publication_path.clone()),
+            )
+        })
+        .collect::<BTreeMap<_, _>>();
+    for (record, entry) in records.iter().zip(entries.iter_mut()) {
+        entry.relationships = store
+            .outgoing_relationships(&record.id)?
+            .into_iter()
+            .map(|relationship| {
+                let target_id = relationship.target_id.to_string();
+                let (target_title, publication_path) = index.get(&target_id).ok_or_else(|| {
+                    CliError::Message(format!(
+                        "relationship target is missing from manifest: {}",
+                        target_id
+                    ))
+                })?;
+                Ok(ResolvedRelationship {
+                    relation: relationship.relation,
+                    target_id,
+                    target_title: target_title.clone(),
+                    target_href: format!("../{publication_path}"),
+                })
+            })
+            .collect::<Result<Vec<_>, CliError>>()?;
+    }
 
     Ok(Manifest {
         schema_version: SCHEMA_VERSION,
@@ -77,6 +121,7 @@ fn manifest_entry(
         title: record.title.clone(),
         tags: tags(record)?,
         content_hash: content_hash(markdown),
+        relationships: Vec::new(),
         rendered_markdown: markdown.clone(),
     })
 }
@@ -170,6 +215,7 @@ mod tests {
             second.entries[0].content_hash
         );
         assert_eq!(first.entries[0].tags, Vec::<String>::new());
+        assert!(first.entries[0].relationships.is_empty());
         assert_eq!(first.schema_version, SCHEMA_VERSION);
         assert_eq!(first.strata_build, build_version());
     }
@@ -186,6 +232,32 @@ mod tests {
         assert_ne!(
             first.entries[0].content_hash,
             second.entries[0].content_hash
+        );
+    }
+
+    #[test]
+    fn resolves_outgoing_relationships_against_manifest_entries() {
+        let (mut store, config) = fixture();
+        let target = store
+            .create(
+                RecordKind::Adr,
+                "Relationship target",
+                RecordKind::Adr.default_document("Relationship target"),
+            )
+            .expect("target");
+        let source = store.all_records().expect("records")[0].id.clone();
+        store
+            .link(&source, "relates-to", &target.id)
+            .expect("relationship");
+
+        let manifest = build(&store, &config).expect("manifest");
+        let relationship = &manifest.entries[0].relationships[0];
+        assert_eq!(relationship.relation, "relates-to");
+        assert_eq!(relationship.target_id, "ADR-0002");
+        assert_eq!(relationship.target_title, "Relationship target");
+        assert_eq!(
+            relationship.target_href,
+            "../adr/0002-relationship-target.html"
         );
     }
 }
