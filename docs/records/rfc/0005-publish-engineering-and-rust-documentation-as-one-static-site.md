@@ -3,11 +3,13 @@ id: "RFC-0005"
 title: "Publish Strata's canonical knowledge as a static site"
 record-type: rfc
 status: draft
-revision: 4
+revision: 5
 date: 2026-08-20
 slug: publish-engineering-and-rust-documentation-as-one-static-site
 tags: []
-relationships: {}
+relationships:
+  produces:
+    - "PDR-0002"
 ---
 
 # RFC-0005: Publish Strata's canonical knowledge as a static site
@@ -68,13 +70,13 @@ Edit generated Markdown or HTML directly after publication. This creates a secon
 
 ## Open Questions
 
-1. Should `strata publish` initially combine Markdown export, Pandoc invocation, site assembly, and validation, or should Pandoc orchestration remain an external repository script?
-2. Which publication filters are required for the first useful site: record kind, status, tag, specification subtree, or graph root?
-3. Which manifest fields are required beyond identity, path, status, and revision: database revision, Strata build identity, source commit, or template identity?
-4. Should the first local publisher write directly to a configured Apache document root, or always produce an artifact that a separate deployment step installs?
-5. Which references are required to resolve before publication, and which may be reported as warnings?
-6. Should public and internal publication profiles be represented in Strata, or remain deployment-level selection of records and fields?
+1. Which publication filters are required for the first useful site: record kind, status, tag, specification subtree, or graph root? -- still open, deferred by PDR-0002 until the single-profile pipeline is exercised.
+2. Which manifest fields are required beyond identity, path, status, and revision? -- PDR-0002's Data Model gives a first answer (schema version, generated_at, Strata build identity, database identity, renderer identity, per-entry content hash); exact JSON field types remain a follow-on EDR once `strata publish` is implemented.
+3. Which references are required to resolve before publication, and which may be reported as warnings? -- PDR-0002's Failure Modes answers this at baseline: publish's precondition is exactly `strata validate`'s existing ERROR set (including EDR-0011's projection-staleness checks) plus path-collision and renderer-failure cases specific to rendering.
+4. Should public and internal publication profiles be represented in Strata, or remain deployment-level selection of records and fields? -- still open, deferred by PDR-0002 for the same reason as filters.
 
 ## Outcome
 
-Draft, revised to define SQLite-to-static-site publication as the core of RFC-0005. Strata owns canonical data, projections, site information architecture, and publication validation; Pandoc renders documents; Apache or another static server hosts the resulting artifact. Git hosting is optional for review, backup, mirroring, and distribution. Rustdoc integration is deferred and must not shape the first implementation boundary. The next design record should settle the publication command boundary, manifest, output layout, staging and replacement semantics, and initial failure policy.
+Draft, revised to define SQLite-to-static-site publication as the core of RFC-0005. Strata owns canonical data, projections, site information architecture, and publication validation; a configured static-site backend renders documents; an ordinary static server hosts the resulting artifact. Git hosting is optional for review, backup, mirroring, and distribution. Rustdoc integration is deferred and must not shape the first implementation boundary.
+
+PDR-0002 (static publication design) now settles the publication command boundary, backend configurability, output target, and staging/replacement semantics: `strata publish` is a single composition-root command (ADR-0017); it always produces a staged artifact directory and never writes to a live document root (ADR-0018); and its static-site backend is invoked as an externally configured subprocess command rather than a compiled Rust trait, so a different generator can be selected without a Strata code change (ADR-0019). This resolves Open Questions 1 and 4. Open Questions 2 and 6 (publication filters, public/internal profiles) remain deferred until the single-profile pipeline is exercised; Open Question 3 (manifest fields) has a first answer in PDR-0002 with exact types left to implementation; Open Question 5 (required references) is answered at baseline by reusing `strata validate`'s existing ERROR set. This RFC remains draft pending implementation and resolution of the remaining open questions.
