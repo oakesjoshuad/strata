@@ -2,8 +2,8 @@
 id: "EDR-0010"
 title: "strata link accepts multiple targets in one atomic transaction; multi-source batches deferred"
 record-type: edr
-status: draft
-revision: 1
+status: accepted
+revision: 3
 date: 2026-08-20
 slug: strata-link-accepts-multiple-targets-in-one-atomic-transaction-m
 tags: []

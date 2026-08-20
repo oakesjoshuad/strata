@@ -2,8 +2,8 @@
 id: "EDR-0009"
 title: "strata context composes search and graph into a bounded, one-hop retrieval envelope"
 record-type: edr
-status: draft
-revision: 1
+status: accepted
+revision: 3
 date: 2026-08-20
 slug: strata-context-composes-search-and-graph-into-a-bounded-one-hop-
 tags: []
