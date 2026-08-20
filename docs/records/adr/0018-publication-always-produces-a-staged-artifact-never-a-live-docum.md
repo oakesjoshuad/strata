@@ -2,8 +2,8 @@
 id: "ADR-0018"
 title: "Publication always produces a staged artifact, never a live document root"
 record-type: adr
-status: proposed
-revision: 2
+status: accepted
+revision: 3
 date: 2026-08-20
 slug: publication-always-produces-a-staged-artifact-never-a-live-docum
 tags: []

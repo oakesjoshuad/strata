@@ -2,8 +2,8 @@
 id: "ADR-0019"
 title: "Static-site backend is an externally configured command, not a compiled trait"
 record-type: adr
-status: proposed
-revision: 2
+status: accepted
+revision: 3
 date: 2026-08-20
 slug: static-site-backend-is-an-externally-configured-command-not-a-co
 tags: []

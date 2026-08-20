@@ -2,8 +2,8 @@
 id: "ADR-0017"
 title: "strata publish is a single composition-root command"
 record-type: adr
-status: proposed
-revision: 2
+status: accepted
+revision: 3
 date: 2026-08-20
 slug: strata-publish-is-a-single-composition-root-command
 tags: []
