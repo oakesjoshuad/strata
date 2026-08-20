@@ -83,7 +83,9 @@ fn render_entry(
     let output = scratch.join(format!("output-{index}.html"));
     let metadata = scratch.join(format!("metadata-{index}.json"));
     fs::write(&input, &entry.rendered_markdown)?;
-    let css = Path::new("../_assets/style.css");
+    let css = PathBuf::from("..")
+        .join(assets::ASSETS_DIR_NAME)
+        .join(assets::STYLESHEET_FILE_NAME);
     let contents = render_backend::render(
         renderer,
         &RenderJob {
@@ -91,7 +93,7 @@ fn render_entry(
             output: &output,
             metadata: &metadata,
             template,
-            css,
+            css: &css,
             entry,
         },
     )?;

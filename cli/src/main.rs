@@ -1,5 +1,4 @@
 mod args;
-#[allow(dead_code)]
 mod assets;
 mod commands;
 mod config;
@@ -7,15 +6,12 @@ mod document;
 mod dump;
 mod export;
 mod help;
-#[allow(dead_code)]
 mod manifest;
 mod output;
 mod parse;
 mod publish;
 mod render;
-#[allow(dead_code)]
 mod render_backend;
-#[allow(dead_code)]
 mod stage;
 mod validate;
 
