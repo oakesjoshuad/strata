@@ -2,8 +2,8 @@
 id: "EDR-0011"
 title: "strata validate folds export and dump staleness checks into one command"
 record-type: edr
-status: draft
-revision: 1
+status: accepted
+revision: 3
 date: 2026-08-20
 slug: strata-validate-folds-export-and-dump-staleness-checks-into-one-
 tags: []
