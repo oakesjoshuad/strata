@@ -10,6 +10,8 @@ mod manifest;
 mod output;
 mod parse;
 mod render;
+#[allow(dead_code)]
+mod stage;
 
 use args::{Cli, Command};
 use clap::Parser;
