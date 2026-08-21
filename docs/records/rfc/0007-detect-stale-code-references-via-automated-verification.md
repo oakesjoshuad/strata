@@ -7,7 +7,9 @@ revision: 1
 date: 2026-08-21
 slug: detect-stale-code-references-via-automated-verification
 tags: []
-relationships: {}
+relationships:
+  produces:
+    - "PDR-0003"
 ---
 
 # RFC-0007: Detect stale code references via automated verification
