@@ -1,4 +1,5 @@
 use crate::args::Command;
+use crate::code_ref_check;
 use crate::config;
 use crate::output::{
     emit_json, print_code_reference, print_dump_result, print_evidence, print_graph,
@@ -225,6 +226,13 @@ pub(crate) fn execute(
                 }
                 return Err(CliError::Message("database validation failed".into()));
             }
+        }
+        Command::CodeRefCheck {
+            id,
+            code_root,
+            json,
+        } => {
+            code_ref_check::run(store, config, id.as_deref(), &code_root, json)?;
         }
         Command::Init
         | Command::Schema { .. }

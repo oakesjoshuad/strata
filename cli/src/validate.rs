@@ -37,6 +37,10 @@ mod tests {
                 value: "renderer".into(),
                 source: Source::Default,
             },
+            code_ref_locator: ResolvedValue {
+                value: "graphlite".into(),
+                source: Source::Default,
+            },
         }
     }
 

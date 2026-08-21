@@ -184,6 +184,10 @@ mod tests {
                 value: "renderer {input}".into(),
                 source: Source::Default,
             },
+            code_ref_locator: ResolvedValue {
+                value: "graphlite".into(),
+                source: Source::Default,
+            },
         }
     }
 

@@ -59,6 +59,24 @@ impl Store {
         }
         Ok(refs)
     }
+
+    pub fn list_all_code_references(&self) -> Result<Vec<CodeReference>, StoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT record_id, relation, path, symbol, line_start, line_end FROM code_reference ORDER BY record_id, path, line_start",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            Ok(CodeReference {
+                record_id: row.get(0)?,
+                relation: row.get(1)?,
+                path: row.get(2)?,
+                symbol: row.get(3)?,
+                line_start: row.get(4)?,
+                line_end: row.get(5)?,
+            })
+        })?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(StoreError::from)
+    }
 }
 
 #[cfg(test)]

@@ -1,5 +1,6 @@
 mod args;
 mod assets;
+mod code_ref_check;
 mod commands;
 mod config;
 mod document;
@@ -13,6 +14,7 @@ mod publish;
 mod render;
 mod render_backend;
 mod stage;
+mod symbol_locator;
 mod validate;
 
 use args::{Cli, Command};
@@ -59,6 +61,7 @@ fn run() -> Result<(), CliError> {
         command.dump_target(),
         cli.publish_target.as_deref(),
         cli.renderer_command.as_deref(),
+        cli.symbol_locator_command.as_deref(),
     )?;
     let path = config.database.value.clone();
     match command {

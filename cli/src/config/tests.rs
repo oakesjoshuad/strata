@@ -21,7 +21,7 @@ fn precedence_is_cli_then_environment_then_file_then_default() {
     let current = env::current_dir().expect("current directory");
     env::set_current_dir(root.join("nested")).expect("nested directory");
     env::set_var("STRATA_DATABASE", "env.db");
-    let config = resolve(Some(Path::new("cli.db")), None, None, None, None).expect("config");
+    let config = resolve(Some(Path::new("cli.db")), None, None, None, None, None).expect("config");
     assert_eq!(config.database.source, Source::Cli);
     assert_eq!(config.export_target.source, Source::File);
     assert_eq!(config.dump_target.source, Source::File);
@@ -48,13 +48,13 @@ fn publish_values_follow_cli_environment_file_and_default_sources() {
     env::remove_var("STRATA_PUBLISH_TARGET");
     env::remove_var("STRATA_PUBLISH_RENDERER");
 
-    let file = resolve(None, None, None, None, None).expect("file config");
+    let file = resolve(None, None, None, None, None, None).expect("file config");
     assert_eq!(file.publish_target.source, Source::File);
     assert_eq!(file.publish_renderer.source, Source::File);
 
     env::set_var("STRATA_PUBLISH_TARGET", "env-site");
     env::set_var("STRATA_PUBLISH_RENDERER", "env-renderer");
-    let environment = resolve(None, None, None, None, None).expect("environment config");
+    let environment = resolve(None, None, None, None, None, None).expect("environment config");
     assert_eq!(environment.publish_target.source, Source::Env);
     assert_eq!(environment.publish_renderer.source, Source::Env);
 
@@ -64,6 +64,7 @@ fn publish_values_follow_cli_environment_file_and_default_sources() {
         None,
         Some(Path::new("cli-site")),
         Some("cli-renderer"),
+        None,
     )
     .expect("CLI config");
     assert_eq!(cli.publish_target.source, Source::Cli);
@@ -84,7 +85,7 @@ fn missing_file_falls_through_to_defaults() {
     let current = env::current_dir().expect("current directory");
     env::set_current_dir(&root).expect("repository directory");
     env::remove_var("STRATA_DATABASE");
-    let config = resolve(None, None, None, None, None).expect("config");
+    let config = resolve(None, None, None, None, None, None).expect("config");
     assert_eq!(config.database.source, Source::Default);
     env::set_current_dir(current).expect("restore directory");
     fs::remove_dir_all(directory).expect("fixture cleanup");
@@ -106,7 +107,7 @@ fn defaults_are_anchored_to_repository_root_from_nested_directory() {
     env::remove_var("STRATA_PUBLISH_TARGET");
     env::remove_var("STRATA_PUBLISH_RENDERER");
 
-    let config = resolve(None, None, None, None, None).expect("config");
+    let config = resolve(None, None, None, None, None, None).expect("config");
     assert_eq!(config.database.value, root.join(DATABASE_DEFAULT));
     assert_eq!(config.export_target.value, root.join(EXPORT_TARGET_DEFAULT));
     assert_eq!(config.dump_target.value, root.join(DUMP_TARGET_DEFAULT));
@@ -138,7 +139,7 @@ fn defaults_are_anchored_to_explicit_database_repository() {
     env::remove_var("STRATA_EXPORT_TARGET");
     env::remove_var("STRATA_DUMP_TARGET");
 
-    let config = resolve(Some(&database), None, None, None, None).expect("config");
+    let config = resolve(Some(&database), None, None, None, None, None).expect("config");
     assert_eq!(config.database.value, database);
     assert_eq!(
         config.export_target.value,
@@ -165,7 +166,8 @@ fn malformed_file_is_an_error() {
     fs::write(root.join(CONFIG_FILE), "not json").expect("config");
     let current = env::current_dir().expect("current directory");
     env::set_current_dir(&root).expect("repository directory");
-    let error = resolve(None, None, None, None, None).expect_err("malformed config must fail");
+    let error =
+        resolve(None, None, None, None, None, None).expect_err("malformed config must fail");
     assert!(error.to_string().contains("failed to parse"));
     env::set_current_dir(current).expect("restore directory");
     fs::remove_dir_all(directory).expect("fixture cleanup");

@@ -10,6 +10,7 @@ pub(crate) const DUMP_TARGET_DEFAULT: &str = "docs/db-snapshot.sql";
 pub(crate) const PUBLISH_TARGET_DEFAULT: &str = ".strata/site";
 pub(crate) const PUBLISH_RENDERER_DEFAULT: &str =
     "pandoc {input} -o {output} --standalone --metadata-file {metadata} --template {template} --css {css} --lua-filter {lua_filter}";
+pub(crate) const CODE_REF_LOCATOR_DEFAULT: &str = "graphlite";
 const CONFIG_FILE: &str = "strata.config.json";
 
 #[derive(Debug, Eq, PartialEq)]
@@ -52,6 +53,7 @@ pub(crate) struct ResolvedConfig {
     pub(crate) dump_target: ResolvedPath,
     pub(crate) publish_target: ResolvedPath,
     pub(crate) publish_renderer: ResolvedValue,
+    pub(crate) code_ref_locator: ResolvedValue,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -62,6 +64,7 @@ struct FileConfig {
     dump_target: Option<String>,
     publish_target: Option<String>,
     publish_renderer: Option<String>,
+    code_ref_locator: Option<String>,
 }
 
 struct Inputs<'a> {
@@ -70,6 +73,7 @@ struct Inputs<'a> {
     dump_target: Option<&'a Path>,
     publish_target: Option<&'a Path>,
     publish_renderer: Option<&'a str>,
+    code_ref_locator: Option<&'a str>,
 }
 
 pub(crate) fn resolve(
@@ -78,6 +82,7 @@ pub(crate) fn resolve(
     dump_target: Option<&Path>,
     publish_target: Option<&Path>,
     publish_renderer: Option<&str>,
+    code_ref_locator: Option<&str>,
 ) -> Result<ResolvedConfig, CliError> {
     let current_dir = env::current_dir()?;
     let root = repository_root(&current_dir);
@@ -88,6 +93,7 @@ pub(crate) fn resolve(
         dump_target,
         publish_target,
         publish_renderer,
+        code_ref_locator,
     };
     let database = resolve_path(
         inputs.database,
@@ -138,6 +144,13 @@ pub(crate) fn resolve(
             file.as_ref()
                 .and_then(|value| value.publish_renderer.as_deref()),
             PUBLISH_RENDERER_DEFAULT,
+        )?,
+        code_ref_locator: resolve_value(
+            inputs.code_ref_locator,
+            "STRATA_CODE_REF_LOCATOR",
+            file.as_ref()
+                .and_then(|value| value.code_ref_locator.as_deref()),
+            CODE_REF_LOCATOR_DEFAULT,
         )?,
     })
 }

@@ -16,6 +16,9 @@ pub(crate) struct Cli {
     /// External publication renderer command template
     #[arg(long, global = true, value_name = "COMMAND")]
     pub(crate) renderer_command: Option<String>,
+    /// External symbol locator command
+    #[arg(long, global = true, value_name = "COMMAND")]
+    pub(crate) symbol_locator_command: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -218,6 +221,18 @@ pub(crate) enum Command {
     },
     /// Check the database for structural and lifecycle issues
     Validate {
+        /// Print the result as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Verify code references against a working tree
+    CodeRefCheck {
+        /// Check only references belonging to this record
+        #[arg(long)]
+        id: Option<String>,
+        /// Working tree containing the referenced paths
+        #[arg(long, value_name = "PATH")]
+        code_root: PathBuf,
         /// Print the result as JSON
         #[arg(long)]
         json: bool,

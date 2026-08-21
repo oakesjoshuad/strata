@@ -258,6 +258,10 @@ mod tests {
                 value: "sh -c 'cat \"$1\" > \"$2\"' sh {input} {output}".into(),
                 source: Source::Default,
             },
+            code_ref_locator: ResolvedValue {
+                value: "graphlite".into(),
+                source: Source::Default,
+            },
         };
         crate::export::run(&store, false, &config.export_target.value).expect("export");
         crate::dump::run(&store, false, &config.dump_target.value).expect("dump");
