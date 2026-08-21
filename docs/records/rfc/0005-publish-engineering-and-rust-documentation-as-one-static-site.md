@@ -2,8 +2,8 @@
 id: "RFC-0005"
 title: "Publish Strata's canonical knowledge as a static site"
 record-type: rfc
-status: under-review
-revision: 7
+status: accepted
+revision: 9
 date: 2026-08-20
 slug: publish-engineering-and-rust-documentation-as-one-static-site
 tags: []
@@ -70,13 +70,15 @@ Edit generated Markdown or HTML directly after publication. This creates a secon
 
 ## Open Questions
 
-1. Which publication filters are required for the first useful site: record kind, status, tag, specification subtree, or graph root? -- still open, deferred by PDR-0002 until the single-profile pipeline is exercised.
-2. Which manifest fields are required beyond identity, path, status, and revision? -- PDR-0002's Data Model gives a first answer (schema version, generated_at, Strata build identity, database identity, renderer identity, per-entry content hash); exact JSON field types remain a follow-on EDR once `strata publish` is implemented.
-3. Which references are required to resolve before publication, and which may be reported as warnings? -- PDR-0002's Failure Modes answers this at baseline: publish's precondition is exactly `strata validate`'s existing ERROR set (including EDR-0011's projection-staleness checks) plus path-collision and renderer-failure cases specific to rendering.
-4. Should public and internal publication profiles be represented in Strata, or remain deployment-level selection of records and fields? -- still open, deferred by PDR-0002 for the same reason as filters.
+1. Which publication filters are required for the first useful site: record kind, status, tag, specification subtree, or graph root? -- Still open. Deferred by PDR-0002 until a concrete filtering need is exercised; no filter support shipped in the first implementation. A future RFC should propose this if and when the need appears.
+2. Which manifest fields are required beyond identity, path, status, and revision? -- Resolved. The shipped `ManifestEntry` (cli/src/manifest.rs) settles this directly: schema_version, generated_at, strata_build, source_database, renderer_command at the manifest level; id, kind, status, revision, slug, publication_path, title, tags, content_hash, and resolved relationships per entry. No separate EDR was needed.
+3. Which references are required to resolve before publication, and which may be reported as warnings? -- Resolved. `strata publish`'s precondition is exactly `strata validate`'s existing ERROR set (including EDR-0011's projection-staleness checks), plus path-collision and renderer-failure cases specific to rendering (PDR-0002 Failure Modes, ADR-0018).
+4. Should public and internal publication profiles be represented in Strata, or remain deployment-level selection of records and fields? -- Still open, deferred for the same reason as Question 1. No profile mechanism exists; the shipped implementation publishes the full record set.
 
 ## Outcome
 
-Draft, revised to define SQLite-to-static-site publication as the core of RFC-0005. Strata owns canonical data, projections, site information architecture, and publication validation; a configured static-site backend renders documents; an ordinary static server hosts the resulting artifact. Git hosting is optional for review, backup, mirroring, and distribution. Rustdoc integration is deferred and must not shape the first implementation boundary.
+Accepted. `strata publish` is implemented and merged to `development` (epic #15, issues #16-24), matching the SQLite-to-static-site pipeline this RFC defines: SQLite remains the sole canonical source; Strata generates deterministic Markdown projections and a publication manifest; a configured Pandoc backend renders documents through Strata-owned templates and styles; publication writes a complete staged artifact and replaces the configured output directory only after generation and validation succeed.
 
-PDR-0002 (static publication design) now settles the publication command boundary, backend configurability, output target, and staging/replacement semantics: `strata publish` is a single composition-root command (ADR-0017); it always produces a staged artifact directory and never writes to a live document root (ADR-0018); and its static-site backend is invoked as an externally configured subprocess command rather than a compiled Rust trait, so a different generator can be selected without a Strata code change (ADR-0019). This resolves Open Questions 1 and 4. Open Questions 2 and 6 (publication filters, public/internal profiles) remain deferred until the single-profile pipeline is exercised; Open Question 3 (manifest fields) has a first answer in PDR-0002 with exact types left to implementation; Open Question 5 (required references) is answered at baseline by reusing `strata validate`'s existing ERROR set. This RFC remains draft pending implementation and resolution of the remaining open questions.
+PDR-0002 (static publication design), ADR-0017 (single composition-root command), ADR-0018 (staged artifact, never a live document root), and ADR-0019 (externally configured renderer subprocess, not a compiled trait) are all accepted and implemented as specified. End-to-end verification against Strata's own self-hosted database confirms real record pages render correctly, including the relationship-graph section (issue #23) and Lua-filter prose cross-referencing (issue #24).
+
+Open Questions 1 and 4 remain deferred, as PDR-0002 anticipated, until a filtered or multi-profile publication need actually arises. Open Questions 2 and 3 are now resolved by the shipped implementation; see questions_for_review for each disposition. Any future filter or publication-profile work is out of scope for this RFC and should be proposed as a new RFC when a concrete need appears.

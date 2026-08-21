@@ -2,8 +2,8 @@
 id: "PDR-0002"
 title: "Static publication design"
 record-type: pdr
-status: review
-revision: 2
+status: approved
+revision: 3
 date: 2026-08-20
 slug: static-publication-design
 tags: []
