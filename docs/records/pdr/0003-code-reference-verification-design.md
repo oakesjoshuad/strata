@@ -2,12 +2,14 @@
 id: "PDR-0003"
 title: "Code-reference verification design"
 record-type: pdr
-status: draft
-revision: 1
+status: approved
+revision: 3
 date: 2026-08-21
 slug: code-reference-verification-design
 tags: []
 relationships:
+  produces:
+    - "EDR-0012"
   relates-to:
     - "ADR-0006"
     - "ADR-0014"

@@ -2,8 +2,8 @@
 id: "RFC-0007"
 title: "Detect stale code references via automated verification"
 record-type: rfc
-status: draft
-revision: 1
+status: accepted
+revision: 4
 date: 2026-08-21
 slug: detect-stale-code-references-via-automated-verification
 tags: []
