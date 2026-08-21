@@ -131,6 +131,7 @@ INSERT INTO record_relation (source_id, relation, target_id) VALUES ('PDR-0001',
 INSERT INTO record_relation (source_id, relation, target_id) VALUES ('PDR-0002', 'produces', 'ADR-0017');
 INSERT INTO record_relation (source_id, relation, target_id) VALUES ('PDR-0002', 'produces', 'ADR-0018');
 INSERT INTO record_relation (source_id, relation, target_id) VALUES ('PDR-0002', 'produces', 'ADR-0019');
+INSERT INTO record_relation (source_id, relation, target_id) VALUES ('PDR-0002', 'produces', 'EDR-0011');
 INSERT INTO record_relation (source_id, relation, target_id) VALUES ('PDR-0002', 'relates-to', 'ADR-0001');
 INSERT INTO record_relation (source_id, relation, target_id) VALUES ('PDR-0002', 'relates-to', 'ADR-0003');
 INSERT INTO record_relation (source_id, relation, target_id) VALUES ('PDR-0002', 'relates-to', 'ADR-0004');

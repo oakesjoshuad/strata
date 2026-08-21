@@ -12,6 +12,7 @@ relationships:
     - "ADR-0017"
     - "ADR-0018"
     - "ADR-0019"
+    - "EDR-0011"
   relates-to:
     - "ADR-0001"
     - "ADR-0003"
