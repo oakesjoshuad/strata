@@ -172,3 +172,6 @@ it's talking to.
 - `docs/specification.md` — the original system specification (34 sections)
 - `docs/research/template-research.md` — external RFC/PDR/ADR/EDR template research
 - `docs/records/` — Strata's own founding records; start with RFC-0001 and PDR-0001
+- `docs/workflow.md` — the RFC -> PDR -> ADR/EDR process, including how to back
+  a proposal with evidence and graphlite-verified reference implementations;
+  the process reference for greenfield work (starting with `substruct`)
