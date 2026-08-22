@@ -2,12 +2,15 @@
 id: "RFC-0009"
 title: "Make valid status transitions discoverable before they are attempted"
 record-type: rfc
-status: draft
-revision: 1
+status: accepted
+revision: 7
 date: 2026-08-21
 slug: make-valid-status-transitions-discoverable-before-they-are-attem
 tags: []
-relationships: {}
+relationships:
+  produces:
+    - "EDR-0014"
+    - "EDR-0015"
 ---
 
 # RFC-0009: Make valid status transitions discoverable before they are attempted
@@ -107,4 +110,4 @@ sufficient as-is?
 
 ## Outcome
 
-TODO: outcome
+Accepted and implemented. Strata derives valid next statuses from lifecycle rules, exposes `strata status <ID> --list`, and enriches invalid-transition errors. EDR-0015 design is implemented through the status_transition audit migration and `strata status <ID> --undo`: undo is allowed only for the immediately latest forward status transition, returns to its exact recorded predecessor, records an explicit undo revision, and rejects repeated undo or any later revision. Historical transitions without audit rows remain non-undoable.

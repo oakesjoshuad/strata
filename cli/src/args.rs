@@ -187,7 +187,13 @@ pub(crate) enum Command {
         /// Record id, e.g. ADR-0001
         id: String,
         /// New status, e.g. accepted, superseded
-        new_status: String,
+        new_status: Option<String>,
+        /// List valid next statuses without changing the record
+        #[arg(long)]
+        list: bool,
+        /// Undo the immediately preceding forward status transition
+        #[arg(long)]
+        undo: bool,
         /// Print the result as JSON
         #[arg(long)]
         json: bool,
@@ -206,6 +212,9 @@ pub(crate) enum Command {
     Revise {
         /// Record id, e.g. ADR-0001
         id: String,
+        /// Merge the supplied JSON fields onto the current document
+        #[arg(long)]
+        patch: bool,
         /// Document content as a JSON object
         #[arg(long)]
         document: Option<String>,

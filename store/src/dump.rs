@@ -2,7 +2,7 @@ use crate::{Store, StoreError};
 use rusqlite::types::ValueRef;
 use std::fmt::Write;
 
-const TABLES: [Table; 5] = [
+const TABLES: [Table; 6] = [
     Table {
         name: "engineering_record",
         order_by: "id",
@@ -23,6 +23,10 @@ const TABLES: [Table; 5] = [
         name: "code_reference",
         order_by: "record_id, relation, path, symbol, line_start, line_end",
     },
+    Table {
+        name: "status_transition",
+        order_by: "record_id, revision",
+    },
 ];
 
 struct Table {
@@ -39,12 +43,16 @@ impl Store {
         for table in TABLES {
             self.append_table(&mut output, table)?;
         }
+        while output.ends_with('\n') {
+            output.pop();
+        }
+        output.push_str("\n\n\n");
         Ok(output)
     }
 
     fn append_schema(&self, output: &mut String) -> Result<(), StoreError> {
         let mut statement = self.conn.prepare(
-            "SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name IN (:table1, :table2, :table3, :table4, :table5) ORDER BY CASE name WHEN :table1 THEN 1 WHEN :table2 THEN 2 WHEN :table3 THEN 3 WHEN :table4 THEN 4 WHEN :table5 THEN 5 END",
+            "SELECT name, sql FROM sqlite_master WHERE type = 'table' AND name IN (:table1, :table2, :table3, :table4, :table5, :table6) ORDER BY CASE name WHEN :table1 THEN 1 WHEN :table2 THEN 2 WHEN :table3 THEN 3 WHEN :table4 THEN 4 WHEN :table5 THEN 5 WHEN :table6 THEN 6 END",
         )?;
         let rows = statement.query_map(
             rusqlite::named_params! {
@@ -53,6 +61,7 @@ impl Store {
                 ":table3": TABLES[2].name,
                 ":table4": TABLES[3].name,
                 ":table5": TABLES[4].name,
+                ":table6": TABLES[5].name,
             },
             |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
         )?;

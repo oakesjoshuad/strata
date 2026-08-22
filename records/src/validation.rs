@@ -18,11 +18,14 @@ pub enum ValidationError {
         field: String,
         expected: FieldKind,
     },
-    #[error("invalid status transition for {kind}: {from} -> {to}")]
+    #[error(
+        "invalid status transition for {kind}: {from} -> {to} (valid from {from}: {valid_next})"
+    )]
     InvalidTransition {
         kind: RecordKind,
         from: Status,
         to: Status,
+        valid_next: String,
     },
     #[error("unsupported relationship: {0}")]
     InvalidRelationship(String),
@@ -95,40 +98,59 @@ pub fn validate_transition(
     from: Status,
     to: Status,
 ) -> Result<(), ValidationError> {
-    let valid = match kind {
-        RecordKind::Rfc => matches!(
-            (from, to),
-            (Status::Draft, Status::Proposed)
-                | (Status::Proposed, Status::UnderReview)
-                | (Status::UnderReview, Status::Accepted)
-                | (Status::UnderReview, Status::Withdrawn)
-        ),
-        RecordKind::Pdr => matches!(
-            (from, to),
-            (Status::Draft, Status::Review)
-                | (Status::Review, Status::Approved)
-                | (Status::Approved, Status::Superseded)
-        ),
-        RecordKind::Adr => matches!(
-            (from, to),
-            (Status::Draft, Status::Proposed)
-                | (Status::Proposed, Status::Accepted)
-                | (Status::Accepted, Status::Deprecated)
-                | (Status::Accepted, Status::Superseded)
-                | (Status::Deprecated, Status::Superseded)
-        ),
-        RecordKind::Edr => matches!(
-            (from, to),
-            (Status::Draft, Status::Proposed)
-                | (Status::Proposed, Status::Accepted)
-                | (Status::Accepted, Status::Superseded)
-        ),
-    };
-    if valid {
+    let valid_next = valid_next_statuses(kind, from);
+    if valid_next.contains(&to) {
         Ok(())
     } else {
-        Err(ValidationError::InvalidTransition { kind, from, to })
+        let valid_next = valid_next
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(", ");
+        let valid_next = if valid_next.is_empty() {
+            "none".into()
+        } else {
+            valid_next
+        };
+        Err(ValidationError::InvalidTransition {
+            kind,
+            from,
+            to,
+            valid_next,
+        })
     }
+}
+
+pub fn valid_next_statuses(kind: RecordKind, from: Status) -> Vec<Status> {
+    let transitions = match kind {
+        RecordKind::Rfc => &[
+            (Status::Draft, Status::Proposed),
+            (Status::Proposed, Status::UnderReview),
+            (Status::UnderReview, Status::Accepted),
+            (Status::UnderReview, Status::Withdrawn),
+        ][..],
+        RecordKind::Pdr => &[
+            (Status::Draft, Status::Review),
+            (Status::Review, Status::Approved),
+            (Status::Approved, Status::Superseded),
+        ][..],
+        RecordKind::Adr => &[
+            (Status::Draft, Status::Proposed),
+            (Status::Proposed, Status::Accepted),
+            (Status::Accepted, Status::Deprecated),
+            (Status::Accepted, Status::Superseded),
+            (Status::Deprecated, Status::Superseded),
+        ][..],
+        RecordKind::Edr => &[
+            (Status::Draft, Status::Proposed),
+            (Status::Proposed, Status::Accepted),
+            (Status::Accepted, Status::Superseded),
+        ][..],
+    };
+    transitions
+        .iter()
+        .filter_map(|(current, next)| (*current == from).then_some(*next))
+        .collect()
 }
 
 pub fn validate_relationship(
@@ -202,6 +224,26 @@ mod tests {
             assert!(validate_transition(kind, Status::Proposed, Status::Accepted).is_ok());
             assert!(validate_transition(kind, Status::Draft, Status::Accepted).is_err());
         }
+    }
+
+    #[test]
+    fn valid_next_statuses_follow_each_kind_lifecycle() {
+        assert_eq!(
+            valid_next_statuses(RecordKind::Rfc, Status::UnderReview),
+            vec![Status::Accepted, Status::Withdrawn]
+        );
+        assert_eq!(
+            valid_next_statuses(RecordKind::Pdr, Status::Approved),
+            vec![Status::Superseded]
+        );
+        assert_eq!(
+            valid_next_statuses(RecordKind::Adr, Status::Accepted),
+            vec![Status::Deprecated, Status::Superseded]
+        );
+        assert_eq!(
+            valid_next_statuses(RecordKind::Edr, Status::Superseded),
+            Vec::<Status>::new()
+        );
     }
 
     #[test]

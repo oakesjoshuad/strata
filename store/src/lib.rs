@@ -117,3 +117,24 @@ pub(crate) fn insert_revision(
     )?;
     Ok(())
 }
+
+pub(crate) fn insert_status_transition(
+    tx: &Transaction<'_>,
+    id: &RecordId,
+    revision: u32,
+    from_status: records::Status,
+    to_status: records::Status,
+    transition_kind: &str,
+) -> Result<(), StoreError> {
+    tx.execute(
+        "INSERT INTO status_transition (record_id, revision, from_status, to_status, transition_kind) VALUES (:id, :revision, :from_status, :to_status, :transition_kind)",
+        rusqlite::named_params! {
+            ":id": id,
+            ":revision": revision,
+            ":from_status": from_status,
+            ":to_status": to_status,
+            ":transition_kind": transition_kind,
+        },
+    )?;
+    Ok(())
+}

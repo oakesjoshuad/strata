@@ -2,12 +2,14 @@
 id: "RFC-0008"
 title: "Add a patch mode to strata revise"
 record-type: rfc
-status: draft
-revision: 1
+status: accepted
+revision: 5
 date: 2026-08-21
 slug: add-a-patch-mode-to-strata-revise
 tags: []
-relationships: {}
+relationships:
+  produces:
+    - "EDR-0013"
 ---
 
 # RFC-0008: Add a patch mode to strata revise
@@ -101,4 +103,4 @@ a first pass, given `--document` is the simpler merge target?
 
 ## Outcome
 
-TODO: outcome
+Accepted. The first implementation slice adds JSON-only --patch support to strata revise. A non-empty JSON object is merged onto the current document, the merged document is validated and recorded as one normal revision, and the full resulting record is returned. Partial Markdown patches remain deferred until the parser has an explicit partial-document shape.

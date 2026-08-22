@@ -2,12 +2,13 @@ use crate::{index_record, Store, StoreError};
 use records::RecordId;
 use serde_json::Value as JsonValue;
 
-const TABLES: [&str; 5] = [
+const TABLES: [&str; 6] = [
     "engineering_record",
     "record_relation",
     "record_revision",
     "evidence",
     "code_reference",
+    "status_transition",
 ];
 
 impl Store {

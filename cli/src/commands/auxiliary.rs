@@ -7,7 +7,8 @@ use crate::output::{
 };
 use crate::render::render_record;
 use crate::{dump, export, parse, publish, validate, CliError};
-use records::{RecordId, RecordKind, Status};
+use records::{valid_next_statuses, RecordId, RecordKind, Status};
+use serde::Serialize;
 use serde_json::json;
 use std::io::{self, IsTerminal};
 use std::str::FromStr;
@@ -165,10 +166,58 @@ pub(crate) fn execute(
         Command::Status {
             id,
             new_status,
+            list,
+            undo,
             json: json_flag,
         } => {
-            let status = Status::from_str(&new_status).map_err(CliError::Message)?;
-            print_value(store.set_status(&parse_id(&id)?, status)?, json_flag)?;
+            let record_id = parse_id(&id)?;
+            if undo && (list || new_status.is_some()) {
+                return Err(CliError::Message(
+                    "status --undo cannot be combined with --list or a new status".into(),
+                ));
+            }
+            if undo {
+                print_value(store.undo_status(&record_id)?, json_flag)?;
+                return Ok(());
+            }
+            if list {
+                if new_status.is_some() {
+                    return Err(CliError::Message(
+                        "status --list does not accept a new status".into(),
+                    ));
+                }
+                let record = store.get(&record_id)?;
+                let result = StatusOptions {
+                    id: record.id.to_string(),
+                    current_status: record.status,
+                    valid_next_statuses: valid_next_statuses(record.id.kind, record.status),
+                };
+                if json_flag {
+                    emit_json(result, true)?;
+                } else if result.valid_next_statuses.is_empty() {
+                    println!(
+                        "{} [{}] valid next statuses: none",
+                        result.id, result.current_status
+                    );
+                } else {
+                    let next = result
+                        .valid_next_statuses
+                        .iter()
+                        .map(ToString::to_string)
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    println!(
+                        "{} [{}] valid next statuses: {}",
+                        result.id, result.current_status, next
+                    );
+                }
+            } else {
+                let new_status = new_status.ok_or_else(|| {
+                    CliError::Message("status requires a new status or --list".into())
+                })?;
+                let status = Status::from_str(&new_status).map_err(CliError::Message)?;
+                print_value(store.set_status(&record_id, status)?, json_flag)?;
+            }
         }
         Command::Retitle {
             id,
@@ -179,6 +228,7 @@ pub(crate) fn execute(
         }
         Command::Revise {
             id,
+            patch,
             document,
             file,
             summary,
@@ -187,6 +237,16 @@ pub(crate) fn execute(
             if document.is_some() && file.is_some() {
                 return Err(CliError::Message(
                     "revise accepts only one of --document or --file".into(),
+                ));
+            }
+            if patch && file.is_some() {
+                return Err(CliError::Message(
+                    "revise --patch currently accepts only --document".into(),
+                ));
+            }
+            if patch && document.is_none() {
+                return Err(CliError::Message(
+                    "revise --patch requires --document".into(),
                 ));
             }
             let record_id = parse_id(&id)?;
@@ -202,7 +262,11 @@ pub(crate) fn execute(
                 (Some(_), Some(_)) => unreachable!(),
             };
             print_value(
-                store.revise(&record_id, document, summary.as_deref())?,
+                if patch {
+                    store.revise_patch(&record_id, document, summary.as_deref())?
+                } else {
+                    store.revise(&record_id, document, summary.as_deref())?
+                },
                 json_flag,
             )?;
         }
@@ -242,6 +306,13 @@ pub(crate) fn execute(
         | Command::Relationships { .. } => unreachable!(),
     }
     Ok(())
+}
+
+#[derive(Debug, Serialize)]
+struct StatusOptions {
+    id: String,
+    current_status: Status,
+    valid_next_statuses: Vec<Status>,
 }
 
 fn parse_id(value: &str) -> Result<RecordId, CliError> {

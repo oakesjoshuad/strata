@@ -1,8 +1,11 @@
-use crate::{index_record, insert_revision, slug, timestamp, Store, StoreError};
+use crate::{
+    index_record, insert_revision, insert_status_transition, slug, timestamp, Store, StoreError,
+};
 use records::{
     validate_document, validate_relationship, validate_transition, Record, RecordId, RecordKind,
     Relationship, Status, ValidationError,
 };
+use rusqlite::OptionalExtension;
 use serde_json::Value as JsonValue;
 
 impl Store {
@@ -52,6 +55,31 @@ impl Store {
         self.get(id)
     }
 
+    pub fn revise_patch(
+        &mut self,
+        id: &RecordId,
+        patch: JsonValue,
+        summary: Option<&str>,
+    ) -> Result<Record, StoreError> {
+        let patch = patch
+            .as_object()
+            .ok_or_else(|| StoreError::Argument("revise --patch requires a JSON object".into()))?;
+        if patch.is_empty() {
+            return Err(StoreError::Argument(
+                "revise --patch requires at least one field".into(),
+            ));
+        }
+        let current = self.get(id)?;
+        let mut document = current.document.clone();
+        let object = document.as_object_mut().ok_or_else(|| {
+            StoreError::Argument("current record document is not a JSON object".into())
+        })?;
+        for (field, value) in patch {
+            object.insert(field.clone(), value.clone());
+        }
+        self.revise(id, document, summary)
+    }
+
     pub fn set_status(&mut self, id: &RecordId, status: Status) -> Result<Record, StoreError> {
         let current = self.get(id)?;
         validate_transition(id.kind, current.status, status)?;
@@ -61,6 +89,57 @@ impl Store {
         tx.execute("UPDATE engineering_record SET status = :status, revision = :revision, updated_at = :updated_at WHERE id = :id", rusqlite::named_params! { ":status": status, ":revision": revision, ":updated_at": &now, ":id": id })?;
         let summary = format!("status changed to {status}");
         insert_revision(&tx, id, revision, &current.document, &summary)?;
+        insert_status_transition(&tx, id, revision, current.status, status, "forward")?;
+        tx.commit()?;
+        self.get(id)
+    }
+
+    pub fn undo_status(&mut self, id: &RecordId) -> Result<Record, StoreError> {
+        let current = self.get(id)?;
+        let transition = self
+            .conn
+            .query_row(
+                "SELECT revision, from_status, to_status FROM status_transition WHERE record_id = :id AND revision = :revision AND transition_kind = :kind",
+                rusqlite::named_params! {
+                    ":id": id,
+                    ":revision": current.revision,
+                    ":kind": "forward",
+                },
+                |row| {
+                    Ok((
+                        row.get::<_, u32>(0)?,
+                        row.get::<_, Status>(1)?,
+                        row.get::<_, Status>(2)?,
+                    ))
+                },
+            )
+            .optional()?;
+        let Some((transition_revision, from_status, to_status)) = transition else {
+            return Err(StoreError::Argument(
+                "status undo is only available immediately after a forward status transition"
+                    .into(),
+            ));
+        };
+        if transition_revision != current.revision || current.status != to_status {
+            return Err(StoreError::Argument(
+                "status undo audit does not match the current record status".into(),
+            ));
+        }
+        let tx = self.conn.transaction()?;
+        let revision = current.revision + 1;
+        let now = timestamp();
+        tx.execute(
+            "UPDATE engineering_record SET status = :status, revision = :revision, updated_at = :updated_at WHERE id = :id",
+            rusqlite::named_params! {
+                ":status": from_status,
+                ":revision": revision,
+                ":updated_at": &now,
+                ":id": id,
+            },
+        )?;
+        let summary = format!("status undo: {to_status} -> {from_status}");
+        insert_revision(&tx, id, revision, &current.document, &summary)?;
+        insert_status_transition(&tx, id, revision, to_status, from_status, "undo")?;
         tx.commit()?;
         self.get(id)
     }
@@ -156,6 +235,55 @@ mod tests {
     }
 
     #[test]
+    fn undo_status_reverses_only_the_latest_forward_transition() {
+        let mut store = Store::open_memory().expect("store");
+        let record = store
+            .create(
+                RecordKind::Adr,
+                "Undo status",
+                RecordKind::Adr.default_document("Undo status"),
+            )
+            .expect("create");
+
+        let proposed = store
+            .set_status(&record.id, Status::Proposed)
+            .expect("propose");
+        let undone = store.undo_status(&record.id).expect("undo");
+
+        assert_eq!(proposed.status, Status::Proposed);
+        assert_eq!(undone.status, Status::Draft);
+        assert_eq!(undone.revision, 3);
+        assert_eq!(
+            store.history(&record.id).expect("history")[2]
+                .change_summary
+                .as_deref(),
+            Some("status undo: proposed -> draft")
+        );
+        assert!(store.undo_status(&record.id).is_err());
+    }
+
+    #[test]
+    fn undo_status_rejects_a_later_revision() {
+        let mut store = Store::open_memory().expect("store");
+        let record = store
+            .create(
+                RecordKind::Adr,
+                "Undo status",
+                RecordKind::Adr.default_document("Undo status"),
+            )
+            .expect("create");
+        store
+            .set_status(&record.id, Status::Proposed)
+            .expect("propose");
+        store
+            .retitle(&record.id, "Later revision")
+            .expect("retitle");
+
+        assert!(store.undo_status(&record.id).is_err());
+        assert_eq!(store.get(&record.id).expect("get").status, Status::Proposed);
+    }
+
+    #[test]
     fn retitle_preserves_document_history_and_reindexes_title() {
         let mut store = Store::open_memory().expect("store");
         let document = RecordKind::Adr.default_document("document content");
@@ -188,6 +316,52 @@ mod tests {
             .search("Old", 10, 0)
             .expect("old title search")
             .is_empty());
+    }
+
+    #[test]
+    fn revise_patch_merges_fields_and_preserves_the_rest() {
+        let mut store = Store::open_memory().expect("store");
+        let original = RecordKind::Adr.default_document("original");
+        let record = store
+            .create(RecordKind::Adr, "Original title", original.clone())
+            .expect("create");
+
+        let updated = store
+            .revise_patch(
+                &record.id,
+                serde_json::json!({"decision": "patched"}),
+                Some("patched decision"),
+            )
+            .expect("patch");
+
+        assert_eq!(updated.revision, 2);
+        assert_eq!(updated.document["decision"], "patched");
+        assert_eq!(updated.document["context"], original["context"]);
+        assert_eq!(
+            store.history(&record.id).expect("history")[1]
+                .change_summary
+                .as_deref(),
+            Some("patched decision")
+        );
+    }
+
+    #[test]
+    fn revise_patch_rejects_empty_and_non_object_patches() {
+        let mut store = Store::open_memory().expect("store");
+        let record = store
+            .create(
+                RecordKind::Adr,
+                "Original title",
+                RecordKind::Adr.default_document("original"),
+            )
+            .expect("create");
+
+        assert!(store
+            .revise_patch(&record.id, serde_json::json!({}), None)
+            .is_err());
+        assert!(store
+            .revise_patch(&record.id, serde_json::json!("not an object"), None)
+            .is_err());
     }
 
     #[test]
