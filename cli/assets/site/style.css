@@ -19,15 +19,17 @@
   --nord14: #a3be8c;
   --nord15: #b48ead;
 
-  /* Semantic layer -- daylight (light) is the default on bare :root */
-  --surface-00: var(--nord6);
-  --surface-01: var(--nord5);
-  --surface-02: var(--nord4);
-  --surface-03: rgba(46, 52, 64, 0.12);
-  --text-primary: var(--nord0);
-  --text-secondary: var(--nord2);
-  --text-tertiary: var(--nord3);
-  --accent-primary: var(--nord10);
+  /* Semantic layer -- Nord dark (polar night) is strata's default look,
+     independent of the visitor's OS preference. Light is opt-in only,
+     via the toggle button (see template.html), never the unstyled default. */
+  --surface-00: var(--nord0);
+  --surface-01: var(--nord1);
+  --surface-02: var(--nord2);
+  --surface-03: var(--nord3);
+  --text-primary: var(--nord6);
+  --text-secondary: var(--nord4);
+  --text-tertiary: var(--nord4);
+  --accent-primary: var(--nord8);
   --accent-error: var(--nord11);
   --accent-warning: var(--nord12);
   --accent-success: var(--nord14);
@@ -35,24 +37,11 @@
   --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
 
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 
-/* System dark preference, unless the visitor explicitly chose light via the toggle */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --surface-00: var(--nord0);
-    --surface-01: var(--nord1);
-    --surface-02: var(--nord2);
-    --surface-03: var(--nord3);
-    --text-primary: var(--nord6);
-    --text-secondary: var(--nord4);
-    --text-tertiary: var(--nord4);
-    --accent-primary: var(--nord8);
-  }
-}
-
-/* Explicit toggle always wins, regardless of system preference */
+/* Explicit toggle-to-dark: identical to the default, kept for parity so an
+   explicit data-theme="dark" always resolves the same as no attribute at all. */
 :root[data-theme='dark'] {
   --surface-00: var(--nord0);
   --surface-01: var(--nord1);
@@ -62,6 +51,19 @@
   --text-secondary: var(--nord4);
   --text-tertiary: var(--nord4);
   --accent-primary: var(--nord8);
+}
+
+/* Explicit opt-in to light (daylight/snow storm), only via the toggle */
+:root[data-theme='light'] {
+  --surface-00: var(--nord6);
+  --surface-01: var(--nord5);
+  --surface-02: var(--nord4);
+  --surface-03: rgba(46, 52, 64, 0.12);
+  --text-primary: var(--nord0);
+  --text-secondary: var(--nord2);
+  --text-tertiary: var(--nord3);
+  --accent-primary: var(--nord10);
+  color-scheme: light;
 }
 
 * {

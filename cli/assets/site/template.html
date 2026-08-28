@@ -68,7 +68,9 @@ $endfor$
       function currentTheme() {
         var explicit = root.getAttribute('data-theme');
         if (explicit) return explicit;
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        // Dark (Nord polar night) is strata's default rendering, not
+        // conditional on OS preference -- see style.css.
+        return 'dark';
       }
       button.addEventListener('click', function () {
         var next = currentTheme() === 'dark' ? 'light' : 'dark';
