@@ -6,6 +6,10 @@ use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
 use store::Store;
 
+mod aggregate;
+
+pub(crate) use aggregate::render_aggregate;
+
 pub(crate) fn render_record(store: &Store, id: &RecordId) -> Result<String, CliError> {
     let record = store.get(id)?;
     let relationships = store.outgoing_relationships(id)?;
@@ -30,6 +34,7 @@ pub(crate) fn render_template(kind: RecordKind) -> Result<String, CliError> {
     let mut blocks = vec![Block::Heading {
         level: 1,
         text: format!("{id}: {title}"),
+        id: None,
     }];
     blocks.extend(document_body(kind, &document)?);
     let frontmatter = Frontmatter {
@@ -74,6 +79,7 @@ fn document_from_record(
     let mut blocks = vec![Block::Heading {
         level: 1,
         text: format!("{}: {}", record.id, record.title),
+        id: None,
     }];
     blocks.extend(document_body(record.id.kind, &record.document)?);
     let date = record.created_at.chars().take(10).collect();
@@ -102,6 +108,7 @@ fn document_body(kind: RecordKind, document: &JsonValue) -> Result<Vec<Block>, C
         blocks.push(Block::Heading {
             level: 2,
             text: (*heading).into(),
+            id: None,
         });
         blocks.extend(section_blocks(value)?);
     }
@@ -213,8 +220,12 @@ fn render_document(document: &Document) -> String {
     output.push_str("---\n\n");
     for block in &document.blocks {
         match block {
-            Block::Heading { level, text } => {
-                output.push_str(&format!("{} {}\n\n", "#".repeat(usize::from(*level)), text));
+            Block::Heading { level, text, id } => {
+                output.push_str(&format!("{} {}", "#".repeat(usize::from(*level)), text));
+                if let Some(id) = id {
+                    output.push_str(&format!(" {{#{id}}}"));
+                }
+                output.push_str("\n\n");
             }
             Block::Paragraph(content) => {
                 output.push_str(&escape_paragraph(content.trim_end_matches('\n')));
@@ -319,6 +330,7 @@ mod tests {
             Block::Heading {
                 level: 1,
                 text: "Heading".into(),
+                id: None,
             },
             Block::Paragraph("Paragraph".into()),
             Block::List(vec!["item".into()]),

@@ -263,6 +263,7 @@ fn validate_from_nested_directory_uses_repository_default_targets() {
     let nested = root.join("nested");
     let database = root.join("selected.db");
     fs::create_dir_all(root.join(".git")).expect("git marker");
+    fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").expect("git HEAD");
     fs::create_dir_all(&nested).expect("nested directory");
 
     let created = run_in_directory(

@@ -15,6 +15,11 @@ fn publish_args(target: &Path, renderer: &str) -> Vec<String> {
 
 fn prepare_projections(fixture: &Fixture) {
     fs::create_dir_all(fixture.directory.join(".git")).expect("repository marker");
+    fs::write(
+        fixture.directory.join(".git/HEAD"),
+        "ref: refs/heads/main\n",
+    )
+    .expect("repository HEAD");
     let exported = run_in_directory(&fixture.directory, &fixture.database, ["export"]);
     assert!(exported.status.success(), "{}", output_text(&exported));
     let dumped = run_in_directory(&fixture.directory, &fixture.database, ["dump"]);

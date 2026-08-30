@@ -461,6 +461,9 @@ INSERT INTO code_reference (record_id, relation, path, symbol, line_start, line_
 INSERT INTO code_reference (record_id, relation, path, symbol, line_start, line_end, id) VALUES ('EDR-0017', 'implements', 'store/src/connection.rs', NULL, 59, 84, 'EDR-0017-CR-006');
 INSERT INTO code_reference (record_id, relation, path, symbol, line_start, line_end, id) VALUES ('EDR-0017', 'implements', 'store/src/connection.rs', 'backfill_code_reference_ids', 59, 81, 'EDR-0017-CR-004');
 INSERT INTO code_reference (record_id, relation, path, symbol, line_start, line_end, id) VALUES ('EDR-0018', 'implements', 'cli/src/symbol_locator.rs', NULL, 20, 65, 'EDR-0018-CR-001');
+INSERT INTO code_reference (record_id, relation, path, symbol, line_start, line_end, id) VALUES ('PDR-0004', 'implements', 'store/src/validate/specification.rs', 'duplicate_requirement_issues', 7, 49, 'PDR-0004-CR-001');
+INSERT INTO code_reference (record_id, relation, path, symbol, line_start, line_end, id) VALUES ('RFC-0006', 'implements', 'records/src/kind.rs', 'default_document', 175, 186, 'RFC-0006-CR-001');
+INSERT INTO code_reference (record_id, relation, path, symbol, line_start, line_end, id) VALUES ('RFC-0011', 'implements', 'cli/src/render/aggregate.rs', 'render_aggregate', 6, 15, 'RFC-0011-CR-001');
 
 INSERT INTO status_transition (record_id, revision, from_status, to_status, transition_kind) VALUES ('EDR-0016', 2, 'draft', 'proposed', 'forward');
 INSERT INTO status_transition (record_id, revision, from_status, to_status, transition_kind) VALUES ('EDR-0016', 3, 'proposed', 'accepted', 'forward');

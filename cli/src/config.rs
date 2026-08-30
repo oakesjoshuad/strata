@@ -294,12 +294,22 @@ fn validate_value(value: &str, source: &str) -> Result<(), CliError> {
 fn repository_root(start: &Path) -> Option<PathBuf> {
     let mut current = Some(start);
     while let Some(path) = current {
-        if path.join(".git").exists() {
+        if is_git_metadata(&path.join(".git")) {
             return Some(path.to_path_buf());
         }
         current = path.parent();
     }
     None
+}
+
+fn is_git_metadata(path: &Path) -> bool {
+    if path.is_dir() {
+        return path.join("HEAD").is_file();
+    }
+    match fs::read_to_string(path) {
+        Ok(contents) => contents.starts_with("gitdir: "),
+        Err(_) => false,
+    }
 }
 
 fn load_file(root: Option<&Path>) -> Result<Option<FileConfig>, CliError> {

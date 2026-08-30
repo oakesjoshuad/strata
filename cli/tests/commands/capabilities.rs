@@ -6,11 +6,13 @@ fn capabilities_json_describes_all_kind_purposes() {
     assert!(output.status.success(), "{}", output_text(&output));
     let capabilities: Value = serde_json::from_slice(&output.stdout).expect("capabilities JSON");
     let kinds = capabilities["kinds"].as_array().expect("kind descriptions");
-    assert_eq!(kinds.len(), 4);
+    assert_eq!(kinds.len(), 9);
     for kind in kinds {
         assert!(kind["kind"].is_string());
         assert!(!kind["purpose"].as_str().expect("purpose").is_empty());
     }
+    assert!(kinds.iter().any(|kind| kind["kind"] == "specification"));
+    assert!(kinds.iter().any(|kind| kind["kind"] == "risk"));
 
     let commands = capabilities["commands"]
         .as_array()

@@ -2,6 +2,9 @@ use crate::{FieldKind, RecordId, RecordKind, Status};
 use serde_json::Value as JsonValue;
 use thiserror::Error;
 
+mod lifecycle;
+mod specification;
+
 #[derive(Debug, Error)]
 pub enum ValidationError {
     #[error("title must not be empty")]
@@ -18,6 +21,14 @@ pub enum ValidationError {
         field: String,
         expected: FieldKind,
     },
+    #[error("{kind} document table field '{field}' is invalid: {detail}")]
+    InvalidTable {
+        kind: RecordKind,
+        field: String,
+        detail: String,
+    },
+    #[error("risk category must be one of technical, product, security, business, compliance; found '{0}'")]
+    InvalidRiskCategory(String),
     #[error(
         "invalid status transition for {kind}: {from} -> {to} (valid from {from}: {valid_next})"
     )]
@@ -31,6 +42,12 @@ pub enum ValidationError {
     InvalidRelationship(String),
     #[error("record ids must be different")]
     SelfRelationship,
+    #[error("relationship '{relation}' cannot link {source_kind} to {target_kind}")]
+    InvalidRelationshipEndpoint {
+        relation: String,
+        source_kind: RecordKind,
+        target_kind: RecordKind,
+    },
     #[error("unsupported evidence kind: {0}")]
     InvalidEvidenceKind(String),
     #[error("evidence title must not be empty")]
@@ -39,7 +56,7 @@ pub enum ValidationError {
     EmptyCodeReferencePath,
 }
 
-pub const RELATIONSHIPS: [&str; 10] = [
+pub const RELATIONSHIPS: [&str; 15] = [
     "relates-to",
     "derived-from",
     "explored-by",
@@ -50,6 +67,11 @@ pub const RELATIONSHIPS: [&str; 10] = [
     "implemented-by",
     "supported-by",
     "supersedes",
+    "contains",
+    "refines",
+    "uses-term",
+    "at-risk-from",
+    "mitigates",
 ];
 
 pub const EVIDENCE_KINDS: [&str; 7] = [
@@ -81,6 +103,7 @@ pub fn validate_document(kind: RecordKind, document: &JsonValue) -> Result<(), V
                 });
             }
             (FieldKind::Scalar, JsonValue::String(_)) | (FieldKind::List, JsonValue::Array(_)) => {}
+            (FieldKind::Table, value) if table_is_valid(value) => {}
             (expected, _) => {
                 return Err(ValidationError::WrongFieldType {
                     kind,
@@ -90,7 +113,41 @@ pub fn validate_document(kind: RecordKind, document: &JsonValue) -> Result<(), V
             }
         }
     }
+    if kind == RecordKind::Risk {
+        let category = obj
+            .get("category")
+            .and_then(JsonValue::as_str)
+            .expect("Risk category was validated as a non-empty string");
+        if !["technical", "product", "security", "business", "compliance"].contains(&category) {
+            return Err(ValidationError::InvalidRiskCategory(category.into()));
+        }
+    }
+    if kind == RecordKind::Specification {
+        specification::validate_document(document)?;
+    }
     Ok(())
+}
+
+fn table_is_valid(value: &JsonValue) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+    if object.len() != 2 || !object.contains_key("headers") || !object.contains_key("rows") {
+        return false;
+    }
+    let Some(headers) = object.get("headers").and_then(JsonValue::as_array) else {
+        return false;
+    };
+    if headers.iter().any(|header| !header.is_string()) {
+        return false;
+    }
+    let Some(rows) = object.get("rows").and_then(JsonValue::as_array) else {
+        return false;
+    };
+    rows.iter().all(|row| {
+        row.as_array()
+            .is_some_and(|cells| cells.iter().all(JsonValue::is_string))
+    })
 }
 
 pub fn validate_transition(
@@ -122,35 +179,7 @@ pub fn validate_transition(
 }
 
 pub fn valid_next_statuses(kind: RecordKind, from: Status) -> Vec<Status> {
-    let transitions = match kind {
-        RecordKind::Rfc => &[
-            (Status::Draft, Status::Proposed),
-            (Status::Proposed, Status::UnderReview),
-            (Status::UnderReview, Status::Accepted),
-            (Status::UnderReview, Status::Withdrawn),
-        ][..],
-        RecordKind::Pdr => &[
-            (Status::Draft, Status::Review),
-            (Status::Review, Status::Approved),
-            (Status::Approved, Status::Superseded),
-        ][..],
-        RecordKind::Adr => &[
-            (Status::Draft, Status::Proposed),
-            (Status::Proposed, Status::Accepted),
-            (Status::Accepted, Status::Deprecated),
-            (Status::Accepted, Status::Superseded),
-            (Status::Deprecated, Status::Superseded),
-        ][..],
-        RecordKind::Edr => &[
-            (Status::Draft, Status::Proposed),
-            (Status::Proposed, Status::Accepted),
-            (Status::Accepted, Status::Superseded),
-        ][..],
-    };
-    transitions
-        .iter()
-        .filter_map(|(current, next)| (*current == from).then_some(*next))
-        .collect()
+    lifecycle::valid_next_statuses(kind, from)
 }
 
 pub fn validate_relationship(
@@ -161,6 +190,22 @@ pub fn validate_relationship(
     validate_relation_kind(relation)?;
     if source == target {
         return Err(ValidationError::SelfRelationship);
+    }
+    let valid_endpoints = match relation {
+        "contains" => {
+            source.kind == RecordKind::Specification && target.kind == RecordKind::Specification
+        }
+        "refines" => target.kind == RecordKind::Specification,
+        "uses-term" => target.kind == RecordKind::Glossary,
+        "at-risk-from" | "mitigates" => target.kind == RecordKind::Risk,
+        _ => true,
+    };
+    if !valid_endpoints {
+        return Err(ValidationError::InvalidRelationshipEndpoint {
+            relation: relation.into(),
+            source_kind: source.kind,
+            target_kind: target.kind,
+        });
     }
     Ok(())
 }
@@ -244,6 +289,15 @@ mod tests {
             valid_next_statuses(RecordKind::Edr, Status::Superseded),
             Vec::<Status>::new()
         );
+        assert_eq!(
+            valid_next_statuses(RecordKind::Risk, Status::Open),
+            vec![
+                Status::Monitoring,
+                Status::Mitigated,
+                Status::Accepted,
+                Status::Materialized,
+            ]
+        );
     }
 
     #[test]
@@ -276,5 +330,25 @@ mod tests {
             validate_code_reference("constrains", "  "),
             Err(ValidationError::EmptyCodeReferencePath)
         ));
+    }
+
+    #[test]
+    fn new_relationships_enforce_their_endpoint_kinds() {
+        let specification = RecordId::new(RecordKind::Specification, 1);
+        let glossary = RecordId::new(RecordKind::Glossary, 1);
+        let risk = RecordId::new(RecordKind::Risk, 1);
+        let adr = RecordId::new(RecordKind::Adr, 1);
+        assert!(validate_relationship(
+            &specification,
+            "contains",
+            &RecordId::new(RecordKind::Specification, 2)
+        )
+        .is_ok());
+        assert!(validate_relationship(&adr, "refines", &specification).is_ok());
+        assert!(validate_relationship(&adr, "uses-term", &glossary).is_ok());
+        assert!(validate_relationship(&adr, "at-risk-from", &risk).is_ok());
+        assert!(validate_relationship(&adr, "mitigates", &risk).is_ok());
+        assert!(validate_relationship(&adr, "contains", &specification).is_err());
+        assert!(validate_relationship(&adr, "uses-term", &risk).is_err());
     }
 }

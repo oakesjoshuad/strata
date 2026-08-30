@@ -6,6 +6,7 @@ fn capabilities_json_reports_file_configuration_source() {
     let root = directory.join("repo");
     let nested = root.join("nested");
     fs::create_dir_all(root.join(".git")).expect("git marker");
+    fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").expect("git HEAD");
     fs::create_dir_all(&nested).expect("nested directory");
     fs::write(
         root.join("strata.config.json"),
@@ -40,6 +41,7 @@ fn capabilities_json_reports_cli_source_over_environment_and_file() {
     let directory = temporary_directory("capabilities-cli");
     let root = directory.join("repo");
     fs::create_dir_all(root.join(".git")).expect("git marker");
+    fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").expect("git HEAD");
     fs::write(
         root.join("strata.config.json"),
         r#"{"database":"file.db","export_target":"file-records","dump_target":"file.sql"}"#,
@@ -64,6 +66,7 @@ fn capabilities_json_reports_environment_source_over_file_when_no_cli_flag() {
     let directory = temporary_directory("capabilities-env");
     let root = directory.join("repo");
     fs::create_dir_all(root.join(".git")).expect("git marker");
+    fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").expect("git HEAD");
     fs::write(
         root.join("strata.config.json"),
         r#"{"database":"file.db","export_target":"file-records","dump_target":"file.sql"}"#,

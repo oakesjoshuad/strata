@@ -86,7 +86,7 @@ pub(crate) fn print() {
     let usage_label_end = usage.find(' ').unwrap_or(usage.len());
     let (usage_label, usage_rest) = usage.split_at(usage_label_end);
     println!(
-        "{about}\n\nStructured RFCs, PDRs, ADRs, and EDRs have canonical SQLite state; Markdown is a generated projection.\n\n{}{usage_rest}\n",
+        "{about}\n\nStructured RFCs, PDRs, ADRs, EDRs, Specifications, Assessments, Research, Glossaries, and Risks have canonical SQLite state; Markdown is a generated projection.\n\n{}{usage_rest}\n",
         heading(usage_label)
     );
 

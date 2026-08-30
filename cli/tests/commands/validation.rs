@@ -7,7 +7,9 @@ fn validate_from_different_repository_uses_database_repository_targets() {
     let caller = directory.join("caller");
     let database = selected.join("selected.db");
     fs::create_dir_all(selected.join(".git")).expect("selected git marker");
+    fs::write(selected.join(".git/HEAD"), "ref: refs/heads/main\n").expect("selected git HEAD");
     fs::create_dir_all(caller.join(".git")).expect("caller git marker");
+    fs::write(caller.join(".git/HEAD"), "ref: refs/heads/main\n").expect("caller git HEAD");
 
     let created = run_in_directory(
         &selected,

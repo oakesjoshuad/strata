@@ -3,11 +3,20 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value as JsonValue};
 use std::str::FromStr;
 
+mod schema;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FieldKind {
     Scalar,
     List,
+    Table,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ExportLayout {
+    PerRecord,
+    Aggregate { file: &'static str },
 }
 
 sql_enum! {
@@ -19,11 +28,26 @@ sql_enum! {
         Pdr => "PDR" | "pdr",
         Adr => "ADR" | "adr",
         Edr => "EDR" | "edr",
+        Specification => "SPEC" | "spec",
+        Assessment => "ASMT" | "asmt",
+        Research => "RSCH" | "rsch",
+        Glossary => "GLOS" | "glos",
+        Risk => "RISK" | "risk",
     }
 }
 
 impl RecordKind {
-    pub const ALL: [Self; 4] = [Self::Rfc, Self::Pdr, Self::Adr, Self::Edr];
+    pub const ALL: [Self; 9] = [
+        Self::Rfc,
+        Self::Pdr,
+        Self::Adr,
+        Self::Edr,
+        Self::Specification,
+        Self::Assessment,
+        Self::Research,
+        Self::Glossary,
+        Self::Risk,
+    ];
 
     pub fn code(self) -> &'static str {
         match self {
@@ -31,6 +55,11 @@ impl RecordKind {
             Self::Pdr => "PDR",
             Self::Adr => "ADR",
             Self::Edr => "EDR",
+            Self::Specification => "SPEC",
+            Self::Assessment => "ASMT",
+            Self::Research => "RSCH",
+            Self::Glossary => "GLOS",
+            Self::Risk => "RISK",
         }
     }
 
@@ -40,6 +69,15 @@ impl RecordKind {
             Self::Pdr => "What does the proposed design look like and what evidence supports it?",
             Self::Adr => "What architecturally significant choice was made and why?",
             Self::Edr => "What implementation-level engineering choice was made?",
+            Self::Specification => {
+                "What must the system do, what constraints apply, and how is conformance verified?"
+            }
+            Self::Assessment => "What do we currently observe about this codebase, product, or conformance?",
+            Self::Research => {
+                "What does external or comparative evidence say about one specific, not-yet-decided question?"
+            }
+            Self::Glossary => "What does this term mean, and where does that meaning apply?",
+            Self::Risk => "What could go wrong, how likely and severe is it, and what is being done about it?",
         }
     }
 
@@ -49,13 +87,25 @@ impl RecordKind {
             Self::Pdr => "pdr",
             Self::Adr => "adr",
             Self::Edr => "edr",
+            Self::Specification => "specification",
+            Self::Assessment => "assessment",
+            Self::Research => "research",
+            Self::Glossary => "glossary",
+            Self::Risk => "risk",
         }
     }
 
     pub fn initial_status(self) -> Status {
         match self {
-            Self::Rfc | Self::Pdr => Status::Draft,
-            Self::Adr | Self::Edr => Status::Draft,
+            Self::Rfc
+            | Self::Pdr
+            | Self::Adr
+            | Self::Edr
+            | Self::Specification
+            | Self::Assessment
+            | Self::Research
+            | Self::Glossary => Status::Draft,
+            Self::Risk => Status::Open,
         }
     }
 
@@ -87,46 +137,32 @@ impl RecordKind {
                 Status::Accepted,
                 Status::Superseded,
             ],
+            Self::Specification => &[
+                Status::Draft,
+                Status::Review,
+                Status::Approved,
+                Status::Superseded,
+            ],
+            Self::Assessment | Self::Research | Self::Glossary => {
+                &[Status::Draft, Status::Accepted, Status::Superseded]
+            }
+            Self::Risk => &[
+                Status::Open,
+                Status::Monitoring,
+                Status::Mitigated,
+                Status::Accepted,
+                Status::Materialized,
+                Status::Closed,
+            ],
         }
     }
 
     pub fn required_fields(self) -> &'static [(&'static str, FieldKind)] {
-        match self {
-            Self::Rfc => &[
-                ("motivation", FieldKind::Scalar),
-                ("problem", FieldKind::Scalar),
-                ("scope", FieldKind::Scalar),
-                ("non_goals", FieldKind::Scalar),
-                ("constraints", FieldKind::Scalar),
-                ("proposal", FieldKind::Scalar),
-                ("alternatives", FieldKind::Scalar),
-                ("questions_for_review", FieldKind::Scalar),
-                ("outcome", FieldKind::Scalar),
-            ],
-            Self::Pdr => &[
-                ("problem", FieldKind::Scalar),
-                ("requirements", FieldKind::Scalar),
-                ("constraints", FieldKind::Scalar),
-                ("proposed_design", FieldKind::Scalar),
-                ("components", FieldKind::Scalar),
-                ("interfaces", FieldKind::Scalar),
-                ("data_model", FieldKind::Scalar),
-                ("failure_modes", FieldKind::Scalar),
-                ("alternatives", FieldKind::Scalar),
-                ("evidence", FieldKind::Scalar),
-                ("experiments", FieldKind::Scalar),
-                ("risks", FieldKind::Scalar),
-                ("open_questions", FieldKind::Scalar),
-                ("resulting_decisions", FieldKind::Scalar),
-            ],
-            Self::Adr | Self::Edr => &[
-                ("context", FieldKind::Scalar),
-                ("decision", FieldKind::Scalar),
-                ("alternatives", FieldKind::Scalar),
-                ("consequences", FieldKind::Scalar),
-                ("evidence", FieldKind::Scalar),
-            ],
-        }
+        schema::required_fields(self)
+    }
+
+    pub fn export_layout(self) -> ExportLayout {
+        schema::export_layout(self)
     }
 
     pub fn field_kind(self, field: &str) -> Option<FieldKind> {
@@ -143,14 +179,7 @@ impl RecordKind {
             JsonValue::String(format!("{}/v1", self.slug())),
         );
         for (field, field_kind) in self.required_fields() {
-            let v = match field_kind {
-                FieldKind::List => JsonValue::Array(Vec::new()),
-                FieldKind::Scalar => JsonValue::String(if *field == "decision" {
-                    format!("We will {title}.")
-                } else {
-                    title.to_string()
-                }),
-            };
+            let v = schema::default_value(field, *field_kind, title);
             m.insert((*field).into(), v);
         }
         JsonValue::Object(m)
@@ -171,6 +200,11 @@ sql_enum! {
         Approved => "approved",
         Deprecated => "deprecated",
         Superseded => "superseded",
+        Open => "open",
+        Monitoring => "monitoring",
+        Mitigated => "mitigated",
+        Materialized => "materialized",
+        Closed => "closed",
     }
 }
 
@@ -185,6 +219,11 @@ mod tests {
             (RecordKind::Pdr, "PDR"),
             (RecordKind::Adr, "ADR"),
             (RecordKind::Edr, "EDR"),
+            (RecordKind::Specification, "SPEC"),
+            (RecordKind::Assessment, "ASMT"),
+            (RecordKind::Research, "RSCH"),
+            (RecordKind::Glossary, "GLOS"),
+            (RecordKind::Risk, "RISK"),
         ];
         for (kind, string) in expected {
             assert_eq!(kind.to_string(), string);
@@ -213,6 +252,11 @@ mod tests {
             (Status::Approved, "approved"),
             (Status::Deprecated, "deprecated"),
             (Status::Superseded, "superseded"),
+            (Status::Open, "open"),
+            (Status::Monitoring, "monitoring"),
+            (Status::Mitigated, "mitigated"),
+            (Status::Materialized, "materialized"),
+            (Status::Closed, "closed"),
         ];
         for (status, string) in expected {
             assert_eq!(status.to_string(), string);

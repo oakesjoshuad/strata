@@ -160,6 +160,7 @@ mod tests {
                 revision: 3,
                 slug: "renderer-test".into(),
                 publication_path: "adr/0001-renderer-test.html".into(),
+                anchor: None,
                 title: "Renderer test".into(),
                 tags: vec!["rust".into(), "sqlite".into()],
                 content_hash: "hash".into(),

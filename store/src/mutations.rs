@@ -2,11 +2,13 @@ use crate::{
     index_record, insert_revision, insert_status_transition, slug, timestamp, Store, StoreError,
 };
 use records::{
-    validate_document, validate_relationship, validate_transition, Record, RecordId, RecordKind,
-    Relationship, Status, ValidationError,
+    validate_document, validate_transition, Record, RecordId, RecordKind, Status, ValidationError,
 };
 use rusqlite::OptionalExtension;
 use serde_json::Value as JsonValue;
+
+mod relationships;
+mod titles;
 
 impl Store {
     pub fn create(
@@ -142,69 +144,6 @@ impl Store {
         insert_status_transition(&tx, id, revision, to_status, from_status, "undo")?;
         tx.commit()?;
         self.get(id)
-    }
-
-    pub fn retitle(&mut self, id: &RecordId, title: &str) -> Result<Record, StoreError> {
-        if title.trim().is_empty() {
-            return Err(ValidationError::EmptyTitle.into());
-        }
-        let current = self.get(id)?;
-        let tx = self.conn.transaction()?;
-        let revision = current.revision + 1;
-        let now = timestamp();
-        tx.execute(
-            "UPDATE engineering_record SET title = :title, revision = :revision, updated_at = :updated_at WHERE id = :id",
-            rusqlite::named_params! {
-                ":title": title,
-                ":revision": revision,
-                ":updated_at": &now,
-                ":id": id,
-            },
-        )?;
-        let summary = format!("title changed to '{title}'");
-        insert_revision(&tx, id, revision, &current.document, &summary)?;
-        index_record(&tx, id, title, &current.document)?;
-        tx.commit()?;
-        self.get(id)
-    }
-
-    pub fn link(
-        &mut self,
-        source: &RecordId,
-        relation: &str,
-        target: &RecordId,
-    ) -> Result<Relationship, StoreError> {
-        self.link_many(source, relation, std::slice::from_ref(target))
-            .map(|mut v| v.remove(0))
-    }
-
-    pub fn link_many(
-        &mut self,
-        source: &RecordId,
-        relation: &str,
-        targets: &[RecordId],
-    ) -> Result<Vec<Relationship>, StoreError> {
-        if self.get(source).is_err() {
-            return Err(StoreError::NotFound(source.clone()));
-        }
-        for target in targets {
-            validate_relationship(source, relation, target)?;
-            if self.get(target).is_err() {
-                return Err(StoreError::NotFound(target.clone()));
-            }
-        }
-        let tx = self.conn.transaction()?;
-        let mut relationships = Vec::with_capacity(targets.len());
-        for target in targets {
-            tx.execute("INSERT INTO record_relation (source_id, relation, target_id) VALUES (:source, :relation, :target)", rusqlite::named_params! { ":source": source, ":relation": relation, ":target": target })?;
-            relationships.push(Relationship {
-                source_id: source.clone(),
-                relation: relation.into(),
-                target_id: target.clone(),
-            });
-        }
-        tx.commit()?;
-        Ok(relationships)
     }
 }
 

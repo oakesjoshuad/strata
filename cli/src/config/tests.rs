@@ -13,6 +13,7 @@ fn precedence_is_cli_then_environment_then_file_then_default() {
     let root = directory.join("repo");
     fs::create_dir_all(root.join("nested")).expect("nested directory");
     fs::create_dir_all(root.join(".git")).expect("git marker");
+    fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").expect("git HEAD");
     fs::write(
         root.join(CONFIG_FILE),
         r#"{"database":"file.db","export_target":"file-export","dump_target":"file.sql","publish_target":"file-site","publish_renderer":"file-renderer"}"#,
@@ -38,6 +39,7 @@ fn publish_values_follow_cli_environment_file_and_default_sources() {
     let directory = tempfile_directory("publish-sources");
     let root = directory.join("repo");
     fs::create_dir_all(root.join(".git")).expect("git marker");
+    fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").expect("git HEAD");
     fs::write(
         root.join(CONFIG_FILE),
         r#"{"publish_target":"file-site","publish_renderer":"file-renderer"}"#,
@@ -82,6 +84,7 @@ fn missing_file_falls_through_to_defaults() {
     let directory = tempfile_directory("missing");
     let root = directory.join("repo");
     fs::create_dir_all(root.join(".git")).expect("git marker");
+    fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").expect("git HEAD");
     let current = env::current_dir().expect("current directory");
     env::set_current_dir(&root).expect("repository directory");
     env::remove_var("STRATA_DATABASE");
@@ -98,6 +101,7 @@ fn defaults_are_anchored_to_repository_root_from_nested_directory() {
     let root = directory.join("repo");
     let nested = root.join("nested");
     fs::create_dir_all(root.join(".git")).expect("git marker");
+    fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").expect("git HEAD");
     fs::create_dir_all(&nested).expect("nested directory");
     let current = env::current_dir().expect("current directory");
     env::set_current_dir(&nested).expect("nested directory");
@@ -131,7 +135,9 @@ fn defaults_are_anchored_to_explicit_database_repository() {
     let selected = directory.join("selected");
     let caller = directory.join("caller");
     fs::create_dir_all(selected.join(".git")).expect("selected git marker");
+    fs::write(selected.join(".git/HEAD"), "ref: refs/heads/main\n").expect("selected git HEAD");
     fs::create_dir_all(caller.join(".git")).expect("caller git marker");
+    fs::write(caller.join(".git/HEAD"), "ref: refs/heads/main\n").expect("caller git HEAD");
     let database = selected.join("strata.db");
     let current = env::current_dir().expect("current directory");
     env::set_current_dir(&caller).expect("caller directory");
@@ -163,6 +169,7 @@ fn malformed_file_is_an_error() {
     let directory = tempfile_directory("malformed");
     let root = directory.join("repo");
     fs::create_dir_all(root.join(".git")).expect("git marker");
+    fs::write(root.join(".git/HEAD"), "ref: refs/heads/main\n").expect("git HEAD");
     fs::write(root.join(CONFIG_FILE), "not json").expect("config");
     let current = env::current_dir().expect("current directory");
     env::set_current_dir(&root).expect("repository directory");

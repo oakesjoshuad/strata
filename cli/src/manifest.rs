@@ -1,7 +1,8 @@
 use crate::config::ResolvedConfig;
 use crate::export::{record_path, rendered_records};
+use crate::render::render_record;
 use crate::{build_version, CliError};
-use records::Record;
+use records::{ExportLayout, Record};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
@@ -9,7 +10,7 @@ use std::path::Path;
 use store::Store;
 
 /// The version of the record-derived publication manifest schema.
-pub(crate) const SCHEMA_VERSION: u32 = 1;
+pub(crate) const SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Manifest {
@@ -29,6 +30,7 @@ pub(crate) struct ManifestEntry {
     pub(crate) revision: u32,
     pub(crate) slug: String,
     pub(crate) publication_path: String,
+    pub(crate) anchor: Option<String>,
     pub(crate) title: String,
     pub(crate) tags: Vec<String>,
     pub(crate) content_hash: String,
@@ -52,7 +54,7 @@ pub(crate) fn build(store: &Store, config: &ResolvedConfig) -> Result<Manifest, 
     let rendered = rendered_records(store, &config.export_target.value)?;
     let mut entries = records
         .iter()
-        .map(|record| manifest_entry(record, &rendered, &config.export_target.value))
+        .map(|record| manifest_entry(store, record, &rendered, &config.export_target.value))
         .collect::<Result<Vec<_>, _>>()?;
 
     // Resolve graph edges from the entries already built above. This keeps
@@ -63,7 +65,7 @@ pub(crate) fn build(store: &Store, config: &ResolvedConfig) -> Result<Manifest, 
         .map(|entry| {
             (
                 entry.id.clone(),
-                (entry.title.clone(), entry.publication_path.clone()),
+                (entry.title.clone(), publication_href(entry)),
             )
         })
         .collect::<BTreeMap<_, _>>();
@@ -73,7 +75,7 @@ pub(crate) fn build(store: &Store, config: &ResolvedConfig) -> Result<Manifest, 
             .into_iter()
             .map(|relationship| {
                 let target_id = relationship.target_id.to_string();
-                let (target_title, publication_path) = index.get(&target_id).ok_or_else(|| {
+                let (target_title, target_href) = index.get(&target_id).ok_or_else(|| {
                     CliError::Message(format!(
                         "relationship target is missing from manifest: {}",
                         target_id
@@ -83,7 +85,7 @@ pub(crate) fn build(store: &Store, config: &ResolvedConfig) -> Result<Manifest, 
                     relation: relationship.relation,
                     target_id,
                     target_title: target_title.clone(),
-                    target_href: format!("../{publication_path}"),
+                    target_href: target_href.clone(),
                 })
             })
             .collect::<Result<Vec<_>, CliError>>()?;
@@ -100,39 +102,65 @@ pub(crate) fn build(store: &Store, config: &ResolvedConfig) -> Result<Manifest, 
 }
 
 fn manifest_entry(
+    store: &Store,
     record: &Record,
     rendered: &std::collections::BTreeMap<std::path::PathBuf, String>,
     export_root: &Path,
 ) -> Result<ManifestEntry, CliError> {
-    let rendered_path = record_path(export_root, record);
+    let rendered_path = rendered_path(export_root, record);
     let markdown = rendered.get(&rendered_path).ok_or_else(|| {
         CliError::Message(format!(
             "rendered record is missing from export result: {}",
             rendered_path.display()
         ))
     })?;
+    let (publication_path, anchor) = publication_location(record);
     Ok(ManifestEntry {
         id: record.id.to_string(),
         kind: record.id.kind.to_string(),
         status: record.status.to_string(),
         revision: record.revision,
         slug: record.slug.clone(),
-        publication_path: publication_path(record),
+        publication_path,
+        anchor,
         title: record.title.clone(),
         tags: tags(record)?,
-        content_hash: content_hash(markdown),
+        content_hash: content_hash(&render_record(store, &record.id)?),
         relationships: Vec::new(),
         rendered_markdown: markdown.clone(),
     })
 }
 
-fn publication_path(record: &Record) -> String {
-    format!(
-        "{}/{:04}-{}.html",
-        record.id.kind.slug(),
-        record.id.number,
-        record.slug
-    )
+fn rendered_path(export_root: &Path, record: &Record) -> std::path::PathBuf {
+    match record.id.kind.export_layout() {
+        ExportLayout::PerRecord => record_path(export_root, record),
+        ExportLayout::Aggregate { file } => export_root.join(file),
+    }
+}
+
+fn publication_location(record: &Record) -> (String, Option<String>) {
+    match record.id.kind.export_layout() {
+        ExportLayout::PerRecord => (
+            format!(
+                "{}/{:04}-{}.html",
+                record.id.kind.slug(),
+                record.id.number,
+                record.slug
+            ),
+            None,
+        ),
+        ExportLayout::Aggregate { file } => (
+            file.replace(".md", ".html"),
+            Some(format!("{:04}-{}", record.id.number, record.slug)),
+        ),
+    }
+}
+
+fn publication_href(entry: &ManifestEntry) -> String {
+    match &entry.anchor {
+        Some(anchor) => format!("../{}#{anchor}", entry.publication_path),
+        None => format!("../{}", entry.publication_path),
+    }
 }
 
 fn tags(record: &Record) -> Result<Vec<String>, CliError> {
@@ -262,6 +290,35 @@ mod tests {
         assert_eq!(
             relationship.target_href,
             "../adr/0002-relationship-target.html"
+        );
+    }
+
+    #[test]
+    fn aggregate_entries_share_a_page_and_keep_a_stable_anchor() {
+        let (mut store, config) = fixture();
+        let glossary = store
+            .create(
+                RecordKind::Glossary,
+                "Lead",
+                RecordKind::Glossary.default_document("Lead"),
+            )
+            .expect("glossary");
+        let source = store.all_records().expect("records")[0].id.clone();
+        store
+            .link(&source, "uses-term", &glossary.id)
+            .expect("relationship");
+
+        let manifest = build(&store, &config).expect("manifest");
+        let glossary = manifest
+            .entries
+            .iter()
+            .find(|entry| entry.id == "GLOS-0001")
+            .expect("glossary entry");
+        assert_eq!(glossary.publication_path, "glossary.html");
+        assert_eq!(glossary.anchor.as_deref(), Some("0001-lead"));
+        assert_eq!(
+            manifest.entries[0].relationships[0].target_href,
+            "../glossary.html#0001-lead"
         );
     }
 }

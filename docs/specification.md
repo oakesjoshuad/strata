@@ -634,9 +634,9 @@ The skill SHOULD instruct agents to:
 1.  Search before creating new records.
 2.  Retrieve relevant current and superseded records.
 3.  Follow relationships where relevant.
-4.  Select RFC, PDR, ADR, or EDR based on the semantic purpose of the
-    record.
-5.  Consult `eng schema` or command help rather than inventing syntax.
+4.  Select the record kind whose semantic purpose fits the work: RFC, PDR, ADR,
+    EDR, Specification, Assessment, Research, Glossary, or Risk.
+5.  Consult `strata schema` or command help rather than inventing syntax.
 6.  Use JSON output for structured machine interaction.
 7.  Use validated CLI mutations rather than editing SQLite directly.
 8.  Run validation after mutations.

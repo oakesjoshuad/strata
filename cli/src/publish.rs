@@ -5,7 +5,7 @@ use crate::render_backend::{self, RenderJob};
 use crate::stage::{self, StagedFile};
 use crate::{validate, CliError};
 use serde::Serialize;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use store::Store;
@@ -40,7 +40,13 @@ pub(crate) fn run(
     let site_index = manifest
         .entries
         .iter()
-        .map(|entry| (entry.id.clone(), format!("../{}", entry.publication_path)))
+        .map(|entry| {
+            let href = match &entry.anchor {
+                Some(anchor) => format!("../{}#{anchor}", entry.publication_path),
+                None => format!("../{}", entry.publication_path),
+            };
+            (entry.id.clone(), href)
+        })
         .collect::<BTreeMap<_, _>>();
     if check {
         return check_manifest(&manifest, &config.publish_target.value);
@@ -49,8 +55,14 @@ pub(crate) fn run(
     let scratch = ScratchDirectory::new()?;
     let template = assets::write_template(scratch.path())?;
     let lua_filter = assets::write_lua_filter(scratch.path())?;
-    let mut files = Vec::with_capacity(manifest.entries.len() + 2);
-    for (index, entry) in manifest.entries.iter().enumerate() {
+    let mut publication_entries = BTreeMap::new();
+    for entry in &manifest.entries {
+        publication_entries
+            .entry(entry.publication_path.as_str())
+            .or_insert(entry);
+    }
+    let mut files = Vec::with_capacity(publication_entries.len() + 2);
+    for (index, entry) in publication_entries.values().enumerate() {
         files.push(render_entry(
             scratch.path(),
             &template,
@@ -148,27 +160,28 @@ fn manifest_differences(current: &Manifest, old: &Manifest) -> Vec<String> {
         .iter()
         .map(|entry| (entry.id.as_str(), entry))
         .collect::<BTreeMap<_, _>>();
-    let mut issues = Vec::new();
+    let mut issues = BTreeSet::new();
     for (id, entry) in &current_by_id {
         match old_by_id.get(id) {
-            None => issues.push(format!("missing {}", entry.publication_path)),
+            None => {
+                issues.insert(format!("missing {}", entry.publication_path));
+            }
             Some(previous) if previous.publication_path != entry.publication_path => {
-                issues.push(format!("stale {}", previous.publication_path));
-                issues.push(format!("missing {}", entry.publication_path));
+                issues.insert(format!("stale {}", previous.publication_path));
+                issues.insert(format!("missing {}", entry.publication_path));
             }
             Some(previous) if previous.content_hash != entry.content_hash => {
-                issues.push(format!("different {}", entry.publication_path));
+                issues.insert(format!("different {}", entry.publication_path));
             }
             Some(_) => {}
         }
     }
     for (id, entry) in &old_by_id {
         if !current_by_id.contains_key(id) {
-            issues.push(format!("stale {}", entry.publication_path));
+            issues.insert(format!("stale {}", entry.publication_path));
         }
     }
-    issues.sort();
-    issues
+    issues.into_iter().collect()
 }
 
 struct ScratchDirectory {

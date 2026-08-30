@@ -105,6 +105,7 @@ fn parse_body(
     let mut blocks = vec![Block::Heading {
         level: 1,
         text: format!("{}: {}", frontmatter.id, frontmatter.title),
+        id: None,
     }];
     for (field, heading) in fields(kind) {
         while lines.get(index).is_some_and(|line| line.trim().is_empty()) {
@@ -123,6 +124,7 @@ fn parse_body(
         blocks.push(Block::Heading {
             level: 2,
             text: (*heading).into(),
+            id: None,
         });
         index += 1;
         let start = index;

@@ -1,12 +1,10 @@
-use crate::render::render_record;
+use crate::render::{render_aggregate, render_record};
 use crate::CliError;
-use records::Record;
+use records::{ExportLayout, Record, RecordKind};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use store::Store;
-
-const RECORD_DIRECTORIES: [&str; 4] = ["rfc", "pdr", "adr", "edr"];
 
 #[derive(Debug, Eq, PartialEq)]
 enum Difference {
@@ -31,7 +29,7 @@ pub(crate) fn run(store: &Store, check: bool, root: &Path) -> Result<(), CliErro
     }
 
     write_projection(&expected, root)?;
-    println!("exported {} records", expected.len());
+    println!("exported {} records", store.all_records()?.len());
     Ok(())
 }
 
@@ -47,15 +45,29 @@ pub(crate) fn rendered_records(
     store: &Store,
     root: &Path,
 ) -> Result<BTreeMap<PathBuf, String>, CliError> {
-    store
-        .all_records()?
-        .iter()
-        .map(|record| {
-            let path = record_path(root, record);
-            let rendered = render_record(store, &record.id)?;
-            Ok((path, rendered))
-        })
-        .collect()
+    let records = store.all_records()?;
+    let mut rendered = BTreeMap::new();
+    let mut aggregate_records = BTreeMap::<RecordKind, Vec<&Record>>::new();
+    for record in &records {
+        match record.id.kind.export_layout() {
+            ExportLayout::PerRecord => {
+                rendered.insert(record_path(root, record), render_record(store, &record.id)?);
+            }
+            ExportLayout::Aggregate { .. } => {
+                aggregate_records
+                    .entry(record.id.kind)
+                    .or_default()
+                    .push(record);
+            }
+        }
+    }
+    for (kind, records) in aggregate_records {
+        let ExportLayout::Aggregate { file } = kind.export_layout() else {
+            continue;
+        };
+        rendered.insert(root.join(file), render_aggregate(kind, &records)?);
+    }
+    Ok(rendered)
 }
 
 pub(crate) fn record_path(root: &Path, record: &Record) -> PathBuf {
@@ -79,8 +91,14 @@ fn differences(
         }
     }
 
-    for kind in RECORD_DIRECTORIES {
-        let directory = root.join(kind);
+    for path in owned_paths(root) {
+        if path.is_file() {
+            if !expected.contains_key(&path) {
+                differences.push(Difference::Stale(path));
+            }
+            continue;
+        }
+        let directory = path;
         let entries = match fs::read_dir(&directory) {
             Ok(entries) => entries,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
@@ -122,8 +140,14 @@ fn write_projection(expected: &BTreeMap<PathBuf, String>, root: &Path) -> Result
         }
         fs::write(path, content)?;
     }
-    for kind in RECORD_DIRECTORIES {
-        let directory = root.join(kind);
+    for path in owned_paths(root) {
+        if path.is_file() {
+            if !expected.contains_key(&path) {
+                fs::remove_file(path)?;
+            }
+            continue;
+        }
+        let directory = path;
         let entries = match fs::read_dir(&directory) {
             Ok(entries) => entries,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
@@ -138,6 +162,16 @@ fn write_projection(expected: &BTreeMap<PathBuf, String>, root: &Path) -> Result
         }
     }
     Ok(())
+}
+
+fn owned_paths(root: &Path) -> Vec<PathBuf> {
+    RecordKind::ALL
+        .into_iter()
+        .map(|kind| match kind.export_layout() {
+            ExportLayout::PerRecord => root.join(kind.slug()),
+            ExportLayout::Aggregate { file } => root.join(file),
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -215,5 +249,34 @@ mod tests {
         assert!(differences
             .iter()
             .any(|difference| matches!(difference, Difference::Different(found) if found == path)));
+    }
+
+    #[test]
+    fn renders_aggregate_glossary_and_risk_projections() {
+        let mut fixture = fixture();
+        fixture
+            .store
+            .create(
+                RecordKind::Glossary,
+                "Lead",
+                RecordKind::Glossary.default_document("Lead"),
+            )
+            .expect("glossary");
+        fixture
+            .store
+            .create(
+                RecordKind::Risk,
+                "Index stale",
+                RecordKind::Risk.default_document("Index stale"),
+            )
+            .expect("risk");
+
+        let rendered = rendered_records(&fixture.store, &fixture.root).expect("render");
+        let glossary = fixture.root.join("glossary.md");
+        let risks = fixture.root.join("risk-register.md");
+        assert!(rendered.contains_key(&glossary));
+        assert!(rendered.contains_key(&risks));
+        assert!(rendered[&glossary].contains("{#0001-lead}"));
+        assert!(rendered[&risks].contains("| ID | Title | Status |"));
     }
 }

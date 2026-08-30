@@ -25,7 +25,7 @@ pub(crate) struct Cli {
 pub(crate) enum Command {
     /// Initialize a new database
     Init,
-    /// Create a new RFC, PDR, ADR, or EDR record
+    /// Create a new engineering knowledge record
     New {
         /// Record kind
         kind: KindArg,
@@ -312,6 +312,17 @@ pub(crate) enum KindArg {
     Adr,
     /// What implementation-level engineering choice was made?
     Edr,
+    /// What must the system do, what constraints apply, and how is conformance verified?
+    #[value(alias = "spec")]
+    Specification,
+    /// What do we currently observe about this codebase, product, or conformance?
+    Assessment,
+    /// What does external or comparative evidence say about one specific, not-yet-decided question?
+    Research,
+    /// What does this term mean, and where does that meaning apply?
+    Glossary,
+    /// What could go wrong, how likely and severe is it, and what is being done about it?
+    Risk,
 }
 
 impl From<KindArg> for RecordKind {
@@ -321,6 +332,11 @@ impl From<KindArg> for RecordKind {
             KindArg::Pdr => Self::Pdr,
             KindArg::Adr => Self::Adr,
             KindArg::Edr => Self::Edr,
+            KindArg::Specification => Self::Specification,
+            KindArg::Assessment => Self::Assessment,
+            KindArg::Research => Self::Research,
+            KindArg::Glossary => Self::Glossary,
+            KindArg::Risk => Self::Risk,
         }
     }
 }

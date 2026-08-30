@@ -3,7 +3,8 @@
 ## What this project is
 
 Strata is a local-first Rust CLI backed by a SQLite knowledge base for tracking
-engineering reasoning — RFCs, PDRs, ADRs, and EDRs — as structured, queryable
+engineering reasoning — RFCs, PDRs, ADRs, EDRs, Specifications, Assessments,
+Research, Glossary entries, and Risks — as structured, queryable
 records instead of hand-maintained Markdown files edited by convention. Markdown
 is a generated projection, not the source of truth. See `docs/specification.md`
 for the original design specification and `docs/records/` for Strata's own
@@ -25,9 +26,10 @@ application version of conventions distilled from a larger sibling project
 2. **No `dyn` dispatch, no `Box<dyn _>`, anywhere.** Storage has exactly one
    implementation (SQLite) and one caller (the CLI) — see ADR-0002 and ADR-0006.
    There is no repository trait to abstract over; `store` exposes concrete
-   functions and `cli` calls them directly. `RecordKind` is a closed four-variant
-   enum (`Rfc`, `Pdr`, `Adr`, `Edr`); any per-kind behavior is an exhaustive
-   `match`, never a registry or a trait-object dispatch table. If a fifth kind is
+   functions and `cli` calls them directly. `RecordKind` is a closed nine-variant
+   enum (`Rfc`, `Pdr`, `Adr`, `Edr`, `Specification`, `Assessment`, `Research`,
+   `Glossary`, `Risk`); any per-kind behavior is an exhaustive
+   `match`, never a registry or a trait-object dispatch table. If a tenth kind is
    ever added, the compiler must fail to build until every match site is updated.
 
 3. **No async, no tokio, no `Send`/`Sync` bounds.** Strata is a single-threaded,
