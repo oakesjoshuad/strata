@@ -24,12 +24,8 @@ pub(crate) fn locate(
     query: &str,
     path: &Path,
 ) -> Result<SymbolLocation, LocatorError> {
-    let stable_ids = run_symbols(command_template, code_root, query, path)?;
-    let stable_id = match stable_ids.as_slice() {
-        [] => return Err(LocatorError::Missing),
-        [stable_id] => stable_id,
-        _ => return Err(LocatorError::Ambiguous),
-    };
+    let stable_id = run_resolve(command_template, code_root, query, path)?;
+    let stable_id = &stable_id;
     let graph = run_locator(
         command_template,
         code_root,
@@ -54,22 +50,75 @@ pub(crate) fn locate(
     }
 }
 
-fn run_symbols(
+// `graphlite resolve --prefer-file` replaces a raw `graphlite symbols --file`
+// full-text search (EDR-0018): `symbols` matches a query string anywhere in a
+// symbol's rendered signature, so a function invoked from within another
+// item's body in the same file (its call site's signature text contains the
+// callee's name) was wrongly reported as a second match, making an
+// unambiguous query look ambiguous. `resolve` already ranks candidates and
+// excludes exactly that kind of incidental substring hit -- confirmed
+// directly, the caller-substring case reports `candidates="1"` under
+// `resolve` where raw `symbols` reported two matches for the same query.
+//
+// `resolve` does not eliminate genuine ambiguity, though: two distinct items
+// sharing a name in different scopes of the same file (verified directly --
+// two functions both named `run` in different modules of one file) are
+// still reported as separate candidates, `resolve` still silently picks a
+// "top" one (`selected_id`) with no error, and -- because graphlite's
+// stable_id does not encode module nesting -- both candidates can even
+// carry the *same* stable_id, so a later `graph sym:<stable_id>` lookup
+// cannot catch the collision either (it resolves to whichever one graphlite
+// picked, not both). The `candidates` count on `<resolution>` is what
+// actually distinguishes these two cases: the caller-substring false
+// positive resolves to `candidates="1"` (resolve itself excluded the
+// substring hit); genuine ambiguity resolves to `candidates="2"` or more.
+// Trusting `selected_id` alone would silently swallow real ambiguity;
+// checking `candidates == 1` restores it as an explicit error without
+// reintroducing the original false-positive rate.
+fn run_resolve(
     command_template: &str,
     code_root: &Path,
     query: &str,
     path: &Path,
-) -> Result<Vec<String>, LocatorError> {
-    let path = path.to_string_lossy();
-    let output = run_locator(
+) -> Result<String, LocatorError> {
+    let expected_path = normalize_path(&path.to_string_lossy());
+    let path_arg = path.to_string_lossy();
+    let output = match run_locator(
         command_template,
         code_root,
-        &["symbols", query, "--file", &path],
-    )?;
-    Ok(tags_with_attribute(&output, "stable_id")
+        &["resolve", query, "--prefer-file", &path_arg],
+    ) {
+        Ok(output) => output,
+        Err(LocatorError::Unavailable(message)) if message.contains("no symbol matched") => {
+            return Err(LocatorError::Missing)
+        }
+        Err(error) => return Err(error),
+    };
+
+    let candidates: usize = tags_with_attribute(&output, "candidates")
         .into_iter()
-        .filter_map(|attributes| attributes.get("stable_id").cloned())
-        .collect())
+        .find_map(|attributes| attributes.get("candidates")?.parse().ok())
+        .ok_or(LocatorError::Missing)?;
+    if candidates != 1 {
+        return Err(LocatorError::Ambiguous);
+    }
+
+    let winner = tags_with_attribute(&output, "stable_id")
+        .into_iter()
+        .next()
+        .ok_or(LocatorError::Missing)?;
+    let (stable_id, file) = (
+        winner.get("stable_id").cloned(),
+        winner.get("file").map(|f| normalize_path(f)),
+    );
+    match (stable_id, file) {
+        (Some(stable_id), Some(file)) if file == expected_path => Ok(stable_id),
+        _ => Err(LocatorError::Missing),
+    }
+}
+
+fn normalize_path(path: &str) -> String {
+    path.trim_start_matches("./").to_owned()
 }
 
 fn run_locator(
@@ -165,7 +214,7 @@ mod tests {
         // neighbors carry their own `range` attribute too -- this fixture
         // reproduces that shape so a naive "any range-bearing tag" scan
         // would wrongly report SYMBOL-AMBIGUOUS on an unambiguous match.
-        let script = r#"if test "$1" = symbols; then printf '<results><symbol stable_id="src/lib.rs::fn::target"/></results>'; else printf '<graph><symbol stable_id="src/lib.rs::fn::other" range="L20-L30"/><symbol stable_id="src/lib.rs::fn::target" range="L1-L1"/></graph>'; fi"#;
+        let script = r#"if test "$1" = resolve; then printf '<resolution query="target" candidates="1" selected_id="1"><symbol stable_id="src/lib.rs::fn::target" file="./src/lib.rs"/></resolution>'; else printf '<graph><symbol stable_id="src/lib.rs::fn::other" range="L20-L30"/><symbol stable_id="src/lib.rs::fn::target" range="L1-L1"/></graph>'; fi"#;
         let command = format!("sh -c {} sh", shell_words::quote(script));
         assert_eq!(
             locate(&command, &root, "target", Path::new("src/lib.rs")).expect("locate"),
@@ -192,7 +241,7 @@ mod tests {
         let file = root.join("src/lib.rs");
         fs::create_dir_all(file.parent().expect("parent")).expect("directory");
         fs::write(&file, "fn target() {}").expect("file");
-        let script = r#"if test "$1" = symbols; then printf '<symbols>\n  <symbol id="1" name="target" stable_id="src/lib.rs::fn::target" signature="fn target(\n    a: i32,\n) -&gt; Result&lt;(), Error&gt;"/>\n</symbols>'; else printf '<graph><symbol stable_id="src/lib.rs::fn::target" range="L1-L1" signature="fn target(\n    a: i32,\n)"/></graph>'; fi"#;
+        let script = r#"if test "$1" = resolve; then printf '<resolution query="target" candidates="1" selected_id="1">\n  <symbol id="1" name="target" file="./src/lib.rs" stable_id="src/lib.rs::fn::target" signature="fn target(\n    a: i32,\n) -&gt; Result&lt;(), Error&gt;"/>\n</resolution>'; else printf '<graph><symbol stable_id="src/lib.rs::fn::target" range="L1-L1" signature="fn target(\n    a: i32,\n)"/></graph>'; fi"#;
         let command = format!("sh -c {} sh", shell_words::quote(script));
         assert_eq!(
             locate(&command, &root, "target", Path::new("src/lib.rs")).expect("locate"),
@@ -201,6 +250,68 @@ mod tests {
                 line_end: 1
             }
         );
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn rejects_top_candidate_from_a_different_file() {
+        // `--prefer-file` is a ranking bias, not a hard filter: if nothing in
+        // the target file matches, resolve can still return a top candidate
+        // from elsewhere. That must not be silently trusted as this file's
+        // symbol.
+        let root = std::env::temp_dir().join(format!(
+            "strata-locator-wrong-file-test-{}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).expect("root");
+        let script = r#"printf '<resolution query="target" candidates="1" selected_id="1"><symbol stable_id="src/other.rs::fn::target" file="./src/other.rs"/></resolution>'"#;
+        let command = format!("sh -c {} sh", shell_words::quote(script));
+        assert!(matches!(
+            locate(&command, &root, "target", Path::new("src/lib.rs")),
+            Err(LocatorError::Missing)
+        ));
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn treats_multiple_resolve_candidates_as_ambiguous() {
+        // resolve always picks a `selected_id` even when it reports more
+        // than one real candidate (verified directly against real graphlite:
+        // two same-named functions in different modules of one file report
+        // candidates="2" and a silently chosen selected_id, with no error).
+        // Trusting selected_id alone would swallow that; the candidates
+        // count is what actually distinguishes it from a clean match.
+        let root = std::env::temp_dir().join(format!(
+            "strata-locator-candidates-test-{}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).expect("root");
+        let script = r#"printf '<resolution query="run" candidates="2" selected_id="1"><symbol stable_id="src/lib.rs::fn::run" file="./src/lib.rs"/><alternatives><symbol stable_id="src/lib.rs::fn::run" file="./src/lib.rs"/></alternatives></resolution>'"#;
+        let command = format!("sh -c {} sh", shell_words::quote(script));
+        assert!(matches!(
+            locate(&command, &root, "run", Path::new("src/lib.rs")),
+            Err(LocatorError::Ambiguous)
+        ));
+        fs::remove_dir_all(root).expect("cleanup");
+    }
+
+    #[test]
+    fn treats_no_symbol_matched_as_missing_not_unavailable() {
+        // `graphlite resolve` exits non-zero with an error message (not
+        // empty XML) when nothing matches at all -- confirmed directly.
+        // That must surface as the same Missing outcome `symbols` returning
+        // zero results used to produce, not as a locator failure.
+        let root = std::env::temp_dir().join(format!(
+            "strata-locator-not-found-test-{}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).expect("root");
+        let script = r#"echo "Error: no symbol matched query 'target'" >&2; exit 1"#;
+        let command = format!("sh -c {} sh", shell_words::quote(script));
+        assert!(matches!(
+            locate(&command, &root, "target", Path::new("src/lib.rs")),
+            Err(LocatorError::Missing)
+        ));
         fs::remove_dir_all(root).expect("cleanup");
     }
 
@@ -222,5 +333,48 @@ mod tests {
         )
         .expect("graphlite locator");
         assert!(location.line_start > 0);
+    }
+
+    #[test]
+    #[ignore = "requires graphlite installed on PATH"]
+    fn real_graphlite_in_file_ambiguity_is_caught_by_the_candidates_check() {
+        // EDR-0018's flagged trade-off, tested against real graphlite rather
+        // than assumed: two distinct functions sharing a name in different
+        // modules of one file. Confirmed directly that `resolve` alone would
+        // NOT be a safe replacement for `symbols` here -- it deterministically
+        // picks a `selected_id` for this case with no error, and because
+        // graphlite's own stable_id does not encode module nesting, both
+        // candidates even carry the *same* stable_id, so a later
+        // `graph sym:<id>` lookup cannot catch the collision either (it just
+        // resolves to whichever one graphlite picked). The `candidates`
+        // count on `<resolution>` is what actually distinguishes this case
+        // (candidates="2") from the original false-positive this record
+        // fixes (candidates="1" once resolve's own ranking excludes the
+        // incidental substring hit) -- this test proves that check holds
+        // against a real, physically ambiguous fixture, not just the
+        // fake-locator unit tests above.
+        let root = std::env::temp_dir().join(format!(
+            "strata-locator-real-ambiguity-test-{}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).expect("root");
+        fs::write(
+            root.join("lib.rs"),
+            "mod outer {\n    pub fn run() {}\n}\n\nmod inner {\n    pub fn run() {}\n}\n",
+        )
+        .expect("file");
+        std::process::Command::new("graphlite")
+            .arg("discover")
+            .arg(".")
+            .current_dir(&root)
+            .output()
+            .expect("graphlite discover");
+
+        assert!(matches!(
+            locate("graphlite", &root, "run", Path::new("lib.rs")),
+            Err(LocatorError::Ambiguous)
+        ));
+
+        fs::remove_dir_all(root).expect("cleanup");
     }
 }

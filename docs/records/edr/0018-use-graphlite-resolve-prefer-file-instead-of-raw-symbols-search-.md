@@ -2,8 +2,8 @@
 id: "EDR-0018"
 title: "Use graphlite resolve --prefer-file instead of raw symbols search in symbol_locator"
 record-type: edr
-status: draft
-revision: 1
+status: accepted
+revision: 3
 date: 2026-08-30
 slug: use-graphlite-resolve-prefer-file-instead-of-raw-symbols-search-
 tags: []

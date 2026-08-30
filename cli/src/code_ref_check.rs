@@ -175,7 +175,7 @@ mod tests {
                 Some(1),
             )
             .expect("reference");
-        let script = r#"if test "$1" = symbols; then printf '<results><symbol stable_id="src/lib.rs::fn::target"/></results>'; else printf '<graph><symbol stable_id="src/lib.rs::fn::other" range="L20-L30"/><symbol stable_id="src/lib.rs::fn::target" range="L1-L1"/></graph>'; fi"#;
+        let script = r#"if test "$1" = resolve; then printf '<resolution query="target" candidates="1" selected_id="1"><symbol stable_id="src/lib.rs::fn::target" file="./src/lib.rs"/></resolution>'; else printf '<graph><symbol stable_id="src/lib.rs::fn::other" range="L20-L30"/><symbol stable_id="src/lib.rs::fn::target" range="L1-L1"/></graph>'; fi"#;
         let command = format!("sh -c {} sh", shell_words::quote(script));
         run(&store, &config(command), None, &root, true).expect("check");
         std::fs::remove_dir_all(root).expect("cleanup");
