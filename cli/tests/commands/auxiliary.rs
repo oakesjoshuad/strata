@@ -133,32 +133,6 @@ fn evidence_add_emits_json_and_graph_includes_it() {
 }
 
 #[test]
-fn code_ref_add_emits_json() {
-    let fixture = Fixture::new();
-    let output = run(
-        &fixture.database,
-        [
-            "code-ref-add",
-            &fixture.record_id,
-            "constrains",
-            "store/src/lib.rs",
-            "--symbol",
-            "Store::graph",
-            "--line-start",
-            "42",
-            "--line-end",
-            "60",
-            "--json",
-        ],
-    );
-    assert!(output.status.success(), "{}", output_text(&output));
-    let reference: Value = serde_json::from_slice(&output.stdout).expect("code reference JSON");
-    assert_eq!(reference["relation"], "constrains");
-    assert_eq!(reference["line_start"], 42);
-    assert_eq!(reference["line_end"], 60);
-}
-
-#[test]
 fn auxiliary_commands_report_validation_errors() {
     let fixture = Fixture::new();
     let evidence = run(

@@ -182,6 +182,35 @@ pub(crate) enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// Update an existing code reference's relation, path, symbol, or lines
+    CodeRefUpdate {
+        /// Code reference id, e.g. ADR-0001-CR-001
+        id: String,
+        /// Relationship kind, e.g. constrains, implements
+        relation: String,
+        /// Path to the referenced file
+        path: String,
+        /// Referenced symbol name, e.g. Store::revise
+        #[arg(long)]
+        symbol: Option<String>,
+        /// First referenced line
+        #[arg(long)]
+        line_start: Option<u32>,
+        /// Last referenced line
+        #[arg(long)]
+        line_end: Option<u32>,
+        /// Print the result as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Remove a code reference
+    CodeRefRemove {
+        /// Code reference id, e.g. ADR-0001-CR-001
+        id: String,
+        /// Print the result as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Transition a record to a new lifecycle status
     Status {
         /// Record id, e.g. ADR-0001

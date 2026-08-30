@@ -1,0 +1,1 @@
+ALTER TABLE code_reference ADD COLUMN id TEXT NOT NULL DEFAULT '';

@@ -2,8 +2,8 @@ use crate::args::Command;
 use crate::code_ref_check;
 use crate::config;
 use crate::output::{
-    emit_json, print_code_reference, print_dump_result, print_evidence, print_graph,
-    print_relationships, print_restored, print_value,
+    emit_json, print_code_reference, print_code_reference_removed, print_dump_result,
+    print_evidence, print_graph, print_relationships, print_restored, print_value,
 };
 use crate::render::render_record;
 use crate::{dump, export, parse, publish, validate, CliError};
@@ -162,6 +162,32 @@ pub(crate) fn execute(
                 line_end,
             )?;
             print_code_reference(code_reference, json_flag)?;
+        }
+        Command::CodeRefUpdate {
+            id,
+            relation,
+            path,
+            symbol,
+            line_start,
+            line_end,
+            json: json_flag,
+        } => {
+            let code_reference = store.update_code_reference(
+                &id,
+                &relation,
+                &path,
+                symbol.as_deref(),
+                line_start,
+                line_end,
+            )?;
+            print_code_reference(code_reference, json_flag)?;
+        }
+        Command::CodeRefRemove {
+            id,
+            json: json_flag,
+        } => {
+            store.remove_code_reference(&id)?;
+            print_code_reference_removed(&id, json_flag)?;
         }
         Command::Status {
             id,

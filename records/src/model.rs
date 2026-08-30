@@ -44,6 +44,7 @@ pub struct Evidence {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CodeReference {
+    pub id: String,
     pub record_id: RecordId,
     pub relation: String,
     pub path: String,

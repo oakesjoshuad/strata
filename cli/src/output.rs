@@ -75,7 +75,7 @@ pub(crate) fn print_graph(graph: Graph, json_flag: bool) -> Result<(), CliError>
             println!("  evidence [{}] {}", evidence.kind, evidence.title);
         }
         for code_ref in graph.code_references {
-            println!("  {} {}", code_ref.relation, code_ref.path);
+            println!("  {} {} {}", code_ref.id, code_ref.relation, code_ref.path);
         }
     }
     Ok(())
@@ -153,11 +153,23 @@ pub(crate) fn print_code_reference(
     } else {
         match code_reference.symbol {
             Some(symbol) => println!(
-                "{} {}::{symbol}",
-                code_reference.relation, code_reference.path
+                "{} {} {}::{symbol}",
+                code_reference.id, code_reference.relation, code_reference.path
             ),
-            None => println!("{} {}", code_reference.relation, code_reference.path),
+            None => println!(
+                "{} {} {}",
+                code_reference.id, code_reference.relation, code_reference.path
+            ),
         }
+    }
+    Ok(())
+}
+
+pub(crate) fn print_code_reference_removed(id: &str, json_flag: bool) -> Result<(), CliError> {
+    if json_flag {
+        emit_json(json!({ "removed": id }), true)?;
+    } else {
+        println!("removed {id}");
     }
     Ok(())
 }

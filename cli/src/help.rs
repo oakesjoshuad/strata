@@ -40,7 +40,13 @@ const HELP_GROUPS: &[(&str, &[&str])] = &[
     ),
     (
         "Link records and evidence",
-        &["link", "evidence-add", "code-ref-add"],
+        &[
+            "link",
+            "evidence-add",
+            "code-ref-add",
+            "code-ref-update",
+            "code-ref-remove",
+        ],
     ),
     (
         "Find and inspect",

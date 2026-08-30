@@ -9,7 +9,7 @@ pub(crate) const EXPORT_TARGET_DEFAULT: &str = "docs/records";
 pub(crate) const DUMP_TARGET_DEFAULT: &str = "docs/db-snapshot.sql";
 pub(crate) const PUBLISH_TARGET_DEFAULT: &str = ".strata/site";
 pub(crate) const PUBLISH_RENDERER_DEFAULT: &str =
-    "pandoc {input} -o {output} --standalone --metadata-file {metadata} --template {template} --css {css} --lua-filter {lua_filter}";
+    "pandoc {input} -f markdown-smart-raw_html-raw_tex -o {output} --standalone --metadata-file {metadata} --template {template} --css {css} --lua-filter {lua_filter}";
 pub(crate) const CODE_REF_LOCATOR_DEFAULT: &str = "graphlite";
 const CONFIG_FILE: &str = "strata.config.json";
 

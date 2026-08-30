@@ -126,6 +126,8 @@ fn cleanup_temporary_directory(directory: PathBuf) {
 mod auxiliary;
 #[path = "commands/capabilities.rs"]
 mod capabilities;
+#[path = "commands/code_ref.rs"]
+mod code_ref;
 #[path = "commands/configuration.rs"]
 mod configuration;
 #[path = "commands/publish.rs"]

@@ -32,6 +32,8 @@ pub enum StoreError {
     Json(#[source] serde_json::Error),
     #[error("record not found: {0}")]
     NotFound(RecordId),
+    #[error("code reference not found: {0}")]
+    CodeReferenceNotFound(String),
     #[error("database validation failed")]
     InvalidDatabase(Vec<String>),
     #[error("invalid argument: {0}")]

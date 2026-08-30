@@ -2,12 +2,14 @@
 id: "RFC-0006"
 title: "Define hierarchical specifications and traceable implementation composition"
 record-type: rfc
-status: draft
-revision: 2
+status: proposed
+revision: 6
 date: 2026-08-20
 slug: define-hierarchical-specifications-and-traceable-implementation-
 tags: []
-relationships: {}
+relationships:
+  produces:
+    - "PDR-0004"
 ---
 
 # RFC-0006: Define hierarchical specifications and traceable implementation composition
@@ -112,6 +114,8 @@ a multi-user coordination service, or a speculative repository abstraction.
 
 Markdown syntax and YAML frontmatter parsing must be delegated to a maintained external Rust package with CommonMark/GFM support, an AST or event model, and source-position information. Strata must not silently flatten or discard valid Markdown content while adapting the external representation to its document model.
 
+Resolved (2026-08-30, Question 9, see evidence RFC-0006-EV-004): the external package owns Markdown delimiter recognition, block/inline parsing, and verbatim YAML-frontmatter-block extraction -- it does not itself deserialize the YAML. Strata keeps deserializing that extracted block into its own strict schema (cli/src/parse/frontmatter.rs), unchanged. This corrects the original phrasing above, which read as though the external parser would own YAML deserialization too; empirical testing showed that is precisely the wrong split (a parser that deserializes and re-serializes YAML itself, such as Pandoc, reorders keys and drops empty sequences, destroying exactly the byte-for-byte guarantee ADR-0010 exists to protect). A YAML crate for Strata's own frontmatter deserialization (e.g. serde_yaml or a maintained successor) is therefore a second, separate dependency decision this RFC's Question 9 did not originally distinguish from the Markdown-parser choice, and should be settled alongside it.
+
 ## Proposal
 
 **Ubiquitous language**
@@ -120,7 +124,16 @@ Strata will distinguish these artifact roles:
 
 \- **Assessment:** What do we currently observe about the product, codebase, or
   implementation? An assessment records scope, observations, evidence, risks,
-  confidence, recommendations, and date. It is time-bound and revisable.
+  confidence, recommendations, and date. It is time-bound and revisable. Its
+  subject is inward: Strata's or the client project's own current state.
+\- **Research:** What does external or comparative evidence say about one
+  specific, not-yet-decided question -- a technique, a prior system's
+  precedent, a library or format choice? Its subject is outward: not the
+  current state of this codebase, but evidence gathered from outside it to
+  inform a decision elsewhere. A research record stays single-topic on
+  purpose, the same discipline ADR-0016 already applies to decisions, so any
+  record that draws on it can link (`explored-by`) to exactly the relevant
+  finding rather than a sprawling internal reference bundling many questions.
 \- **Specification:** What must the system do, what constraints apply, and how
   will conformance be verified? A specification is normative for its scope.
 \- **Design Record:** How should the system be structured to satisfy the
@@ -252,10 +265,71 @@ able to report:
 
 An assessment may motivate a new RFC, revise a draft specification, or reveal
 non-conformance to an approved specification. It must not silently change a
-requirement or decision. Whether Assessment becomes a fifth first-class record
-kind should be decided after a real Strata and Substruct workflow exercises the
-concept; the initial model may represent assessments as a structured artifact
-linked to the records they evaluate.
+requirement or decision.
+
+**Recommendation (2026-08-29)**
+
+Three independent, dated real-usage sessions now back this RFC's Assessment
+hypothesis -- but they split cleanly into two different shapes once examined
+against a sharper test than the first pass of this recommendation used, not
+one:
+
+\- RFC-0006-EV-001's two substruct research tasks (a Rust-idiom pass on
+  zero-allocation dispatch patterns, and a precedent pass reading two prior
+  systems' identity/auth ADRs and domain code) are both outward-looking:
+  neither evaluates substruct's or Strata's own current state, both gather
+  external evidence to ground a decision elsewhere, and the evidence entry's
+  own named cost (a) -- "directly relevant to at least three separate
+  records... but could only really be attached to one of them without
+  duplicating the text three times" -- is specifically a reuse problem, not a
+  current-state-evaluation problem.
+\- RFC-0006-EV-002 (this session's full-repository Strata documentation audit)
+  is inward-looking: it evaluates Strata's own accepted records against its
+  own live database and source tree, and reports observations, severity, and
+  recommendations about that one subject's current state.
+
+That split is real, not cosmetic, and changes the recommendation on Question 2:
+resolve it as two first-class kinds, Assessment and Research, not one.
+
+**Assessment** is for current-state evaluation: what do we observe about the
+codebase, product, or an approved specification's conformance, right now. Its
+natural scope is one subject evaluated holistically, and it is typically
+consumed by a small, specific set of records -- the RFC it grounds, the
+specification whose conformance it corrects.
+
+**Research** is for external or comparative evidence gathered to inform a
+not-yet-made decision: a technique, a prior system's precedent, a library or
+template-format comparison (`docs/research/template-research.md` is exactly
+this, and predates any record kind that could hold it properly). Its value is
+specifically reuse: the same narrow, single-topic finding gets linked
+(`explored-by`, already present in the relationship vocabulary and currently
+unused by any kind) from every otherwise-unrelated record that draws on it,
+rather than being duplicated into each one or flattened into whichever single
+record happened to be nearby when it was written. Enforcing one topic per
+research record is what makes that linking clean -- the same discipline
+CLAUDE.md and ADR-0016 already apply to ADR/EDR decisions, applied here to
+what gets investigated rather than what gets decided.
+
+The classification test, by analogy to ADR-0016's for ADR versus EDR: a record
+is Assessment when its subject is this codebase's or product's own current
+state; it is Research when its subject is external or comparative evidence
+about a question that has not yet been decided. If a record's motivation
+section (see EDR-0007's own precedent) reads as "here is what we found
+elsewhere," it is Research; if it reads as "here is where we currently stand,"
+it is Assessment. A working session that does both should produce two linked
+records, not one record straddling the boundary -- consistent with the
+one-topic discipline each of Assessment and Research needs to stay reusable
+and precise.
+
+This raises the count of proposed new kinds from two to three: Specification,
+Assessment, and Research. That is a correspondingly larger architectural
+commitment against Strata's closed `RecordKind` enum (CLAUDE.md rule 2) than
+the two-kind version of this recommendation, and remains the project owner's
+decision to accept, not this RFC's to decide unilaterally -- status remains
+proposed, not accepted. The exact Assessment/Research classification test
+above should be validated and formalized (an ADR-0016-style decision in its
+own right) by the design record this RFC calls for next, not treated as
+settled by this RFC alone.
 
 **Traceability**
 
@@ -336,8 +410,13 @@ meaning explicit.
 
 1. Should Specification be a fifth record kind, or should the first implementation
    use a structured specification package composed from existing records?
+   Resolution (2026-08-29): fifth record kind. See Recommendation in Proposal.
 2. Should Assessment become a first-class record kind, a structured artifact, or
    an external evaluation projection linked to records?
+   Resolution (2026-08-29, revised): split into two first-class kinds --
+   Assessment (inward, current-state evaluation) and Research (outward,
+   single-topic comparative/investigative evidence). See Recommendation in
+   Proposal for the classification test and supporting evidence.
 3. What exact relationship vocabulary represents containment, refinement,
    constraint, implementation, and verification without overloading existing
    relation meanings?
@@ -352,14 +431,53 @@ meaning explicit.
 8. How should specification packages select and publish child specifications,
    decisions, code references, tests, and assessments together?
 9. Which maintained Rust Markdown package best satisfies the required CommonMark/GFM, YAML frontmatter, AST or event, source-position, and serialization needs, and which exact dialect options should Strata enable?
+   Resolution (2026-08-30): comrak, not Pandoc. A dedicated research pass
+   (RFC-0006-EV-004) empirically tested Pandoc's JSON AST as both parser and
+   long-term storage format against Strata's own 49-record corpus and found it
+   fails on three independent grounds: round-trip fidelity (only 33/49 records
+   AST-stable after one round-trip; a real paragraph in this RFC's own sibling
+   PDR-0004 silently splits into Para+BulletList), YAML frontmatter handling
+   (keys reordered alphabetically, quoting stripped, empty sequences like
+   `tags: []` dropped entirely), and long-term storage viability (Pandoc
+   hard-rejects any stored AST whose api-version doesn't match its own
+   installed version -- confirmed directly, exit 64, "Incompatible API
+   versions" -- with no migration path, which disqualifies it as a canonical
+   or semi-canonical format regardless of the other two problems). comrak
+   scored 49/49 idempotent and 49/49 AST-stable on the identical corpus,
+   preserves YAML frontmatter verbatim (it extracts the block but does not
+   parse it, leaving that to Strata as clarified in Constraints above), and
+   gives free, native source-position spans on every node -- something
+   Pandoc's own `markdown` reader cannot produce at all without switching
+   readers and distorting its AST with wrapper Div/Span nodes. Dialect:
+   CommonMark plus GFM tables, strikethrough, autolink, and tasklist
+   extensions, with `front_matter_delimiter` enabled and all other extensions
+   off, per this RFC's own instruction to disable unrelated extensions unless
+   later justified. Pandoc remains exactly where ADR-0019 already put it --
+   the configured external command for `strata publish` rendering, where
+   byte-for-byte input fidelity was never the requirement. Strata keeps its
+   own Markdown renderer (cli/src/render.rs) for the export/revise round-trip
+   that ADR-0010 governs; comrak's own writer is useful for tests, not for
+   production rendering, since it introduces its own small formatting
+   opinions (e.g. an inert `<!-- end list -->` marker) that would force a
+   whole-corpus re-export for no correctness gain.
 
 ## Outcome
 
-Draft. This RFC proposes that Strata evolve from a decision-record archive into a
-traceable implementation-composition system. It separates normative
-specifications, explanatory design documents, historical decisions, current-state
-assessments, and implementation evidence while preserving the existing ADR and
-EDR meaning. The next design record should define the canonical data model,
-relationship vocabulary, lifecycle additions, migration strategy, and CLI/query
-surfaces. No existing decision is accepted or implemented by this RFC; it defines
-the model that will allow those states to be represented accurately.
+Draft, with a recommended resolution, revised once during review. Three
+dated, real-usage sessions now back the underlying gap as observed fact: two
+substruct research tasks (RFC-0006-EV-001) and this session's full-repository
+Strata documentation audit (RFC-0006-EV-002). Examined against a sharper test,
+those three examples split cleanly -- the two research tasks are
+outward-looking (external/comparative evidence for a not-yet-made decision),
+the documentation audit is inward-looking (current-state evaluation of
+Strata's own records) -- so the recommended resolution now proposes three new
+first-class record kinds rather than two: Specification (Question 1),
+Assessment (current-state evaluation), and Research (single-topic external or
+comparative evidence, reusable via the already-present but currently unused
+`explored-by` relation). Adding three kinds to Strata's closed RecordKind enum
+is a substantial architectural commitment (CLAUDE.md rule 2, ADR-0016's
+classification-test precedent) and remains the project owner's decision to
+accept, not this RFC's to decide unilaterally -- status has accordingly moved
+to proposed rather than accepted. Questions 3-9, plus formalizing the
+Assessment/Research classification test itself, remain open for the design
+record this RFC calls for next.

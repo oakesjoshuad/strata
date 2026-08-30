@@ -20,6 +20,7 @@ relationships:
     - "ADR-0006"
     - "ADR-0014"
     - "EDR-0011"
+    - "PDR-0004"
   resolves:
     - "RFC-0005"
 ---

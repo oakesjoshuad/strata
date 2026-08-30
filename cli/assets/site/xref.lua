@@ -9,7 +9,7 @@ local function replace_mentions(text, site_index, current_id)
 
   while true do
     local start_position, end_position, identifier =
-      text:find("([A-Z][A-Z][A-Z]%-[0-9][0-9][0-9][0-9])", position)
+      text:find("([A-Z][A-Z][A-Z][A-Z]?%-[0-9][0-9][0-9][0-9])", position)
     if start_position == nil then
       break
     end
