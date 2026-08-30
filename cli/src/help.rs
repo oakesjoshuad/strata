@@ -85,7 +85,10 @@ pub(crate) fn print() {
     let usage = command.render_usage().to_string();
     let usage_label_end = usage.find(' ').unwrap_or(usage.len());
     let (usage_label, usage_rest) = usage.split_at(usage_label_end);
-    println!("{about}\n\n{}{usage_rest}\n", heading(usage_label));
+    println!(
+        "{about}\n\nStructured RFCs, PDRs, ADRs, and EDRs have canonical SQLite state; Markdown is a generated projection.\n\n{}{usage_rest}\n",
+        heading(usage_label)
+    );
 
     let name_width = HELP_GROUPS
         .iter()
@@ -114,6 +117,18 @@ pub(crate) fn print() {
         strong("--database <PATH>")
     );
     println!(
+        "      {}  Publication artifact directory (used by publish)",
+        strong("--publish-target <PATH>")
+    );
+    println!(
+        "      {}  External publication renderer command template (used by publish)",
+        strong("--renderer-command <COMMAND>")
+    );
+    println!(
+        "      {}  External symbol locator command (used by code-ref-check)",
+        strong("--symbol-locator-command <COMMAND>")
+    );
+    println!(
         "  {}, {}             Print help",
         strong("-h"),
         strong("--help")
@@ -124,6 +139,9 @@ pub(crate) fn print() {
         strong("--version")
     );
     println!();
+    println!(
+        "Configuration precedence: CLI option, matching STRATA_* environment variable, strata.config.json, then default."
+    );
     println!(
         "Run '{} {} --help' for details on a specific command.",
         strong("strata"),

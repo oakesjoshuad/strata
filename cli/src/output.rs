@@ -188,12 +188,19 @@ pub(crate) fn output_capabilities(
         "database": {"value": resolved.database.value, "source": resolved.database.source.as_str()},
         "export_target": {"value": resolved.export_target.value, "source": resolved.export_target.source.as_str()},
         "dump_target": {"value": resolved.dump_target.value, "source": resolved.dump_target.source.as_str()},
+        "publish_target": {"value": resolved.publish_target.value, "source": resolved.publish_target.source.as_str()},
+        "publish_renderer": {"value": resolved.publish_renderer.value, "source": resolved.publish_renderer.source.as_str()},
+        "code_ref_locator": {"value": resolved.code_ref_locator.value, "source": resolved.code_ref_locator.source.as_str()},
     });
     let subcommands = Cli::command()
         .get_subcommands()
         .map(|command| {
             (
                 command.get_name().to_string(),
+                match command.get_about() {
+                    Some(about) => about.to_string(),
+                    None => String::new(),
+                },
                 command
                     .get_arguments()
                     .any(|argument| argument.get_id() == "json"),
@@ -202,17 +209,24 @@ pub(crate) fn output_capabilities(
         .collect::<Vec<_>>();
     let commands = subcommands
         .iter()
-        .map(|(name, _)| name.clone())
+        .map(|(name, _, _)| name.clone())
+        .collect::<Vec<_>>();
+    let command_details = subcommands
+        .iter()
+        .map(|(name, purpose, supports_json)| {
+            json!({"name": name, "purpose": purpose, "json_output": supports_json})
+        })
         .collect::<Vec<_>>();
     let json_output = subcommands
         .iter()
-        .filter(|(_, supports_json)| *supports_json)
-        .map(|(name, _)| name.clone())
+        .filter(|(_, _, supports_json)| *supports_json)
+        .map(|(name, _, _)| name.clone())
         .collect::<Vec<_>>();
     let value = json!({
         "version": build_version(),
         "kinds": kinds,
         "commands": commands,
+        "command_details": command_details,
         "json_output": json_output,
         "configuration": configuration
     });
