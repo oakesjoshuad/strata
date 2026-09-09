@@ -1,15 +1,26 @@
 [package]
-name = "strata"
+name = "strata-cli"
 version = "0.1.0"
 edition = "2021"
 build = "build.rs"
+description = "Local-first CLI for structured engineering reasoning records"
+license = "MIT"
+repository = "https://github.com/oakesjoshuad/strata"
+homepage = "https://github.com/oakesjoshuad/strata"
+readme = "../README.md"
+keywords = ["engineering", "rfc", "adr", "sqlite", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "strata"
+path = "src/main.rs"
 
 [dependencies]
 blake3.workspace = true
 chrono.workspace = true
 clap.workspace = true
-records = { path = "../records" }
-store = { path = "../store" }
+records = { package = "strata-records", path = "../records", version = "0.1.0" }
+store = { package = "strata-store", path = "../store", version = "0.1.0" }
 serde_json.workspace = true
 serde_yaml.workspace = true
 serde.workspace = true
@@ -17,4 +28,4 @@ shell-words.workspace = true
 thiserror.workspace = true
 
 [build-dependencies]
-kernel = { path = "../kernel" }
+kernel = { package = "strata-kernel", path = "../kernel", version = "0.1.0" }

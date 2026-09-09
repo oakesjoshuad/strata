@@ -1,7 +1,11 @@
 [package]
-name = "kernel"
+name = "strata-kernel"
 version = "0.1.0"
 edition = "2021"
+description = "Internal shared utilities for the Strata engineering knowledge CLI"
+license = "MIT"
+repository = "https://github.com/oakesjoshuad/strata"
+readme = "../README.md"
 
 [dependencies]
 rusqlite.workspace = true

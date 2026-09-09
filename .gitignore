@@ -2,6 +2,7 @@
 # will have compiled files and executables
 debug
 target
+.env
 
 # Local application state, not a git-tracked artifact — SQLite maintains its
 # own revision history (the record_revision table); git tracks the Markdown

@@ -1,7 +1,11 @@
 [package]
-name = "store"
+name = "strata-store"
 version = "0.1.0"
 edition = "2021"
+description = "SQLite storage adapter for Strata engineering knowledge records"
+license = "MIT"
+repository = "https://github.com/oakesjoshuad/strata"
+readme = "../README.md"
 
 [dependencies]
 chrono.workspace = true
@@ -9,7 +13,7 @@ refinery.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-records = { path = "../records" }
-kernel = { path = "../kernel" }
+records = { package = "strata-records", path = "../records", version = "0.1.0" }
+kernel = { package = "strata-kernel", path = "../kernel", version = "0.1.0" }
 thiserror.workspace = true
 unicode-normalization.workspace = true
